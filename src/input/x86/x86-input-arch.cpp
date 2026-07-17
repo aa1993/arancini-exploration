@@ -270,6 +270,11 @@ static std::unique_ptr<translator> get_translator(ir_builder &builder,
     case XED_ICLASS_CVTSI2SD:
     case XED_ICLASS_CVTTSS2SI:
     case XED_ICLASS_CVTTSD2SI:
+
+    case XED_ICLASS_HADDPS:
+    case XED_ICLASS_UNPCKLPS:
+    case XED_ICLASS_MOVLHPS:
+    case XED_ICLASS_PHADDD:
         return std::make_unique<fpvec_translator>(builder);
 
     case XED_ICLASS_PSHUFD:
