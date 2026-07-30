@@ -861,6 +861,10 @@ Value *llvm_static_output_engine_impl::materialise_port(
                     return builder.CreateCmp(CmpInst::Predicate::ICMP_UGT, lhs,
                                              rhs);
             }
+            case binary_arith_op::cmpugt: {
+                return builder.CreateCmp(CmpInst::Predicate::ICMP_UGT, lhs,
+                                             rhs);
+            }
             case binary_arith_op::mod: {
                 auto ltype = lhs->getType();
                 auto rtype = rhs->getType();

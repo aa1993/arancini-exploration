@@ -349,8 +349,13 @@ class ir_builder {
     /// @param rhs
     /// @return a cmpgt node: lhs > rhs
     value_node *insert_cmpgt(port &lhs, port &rhs) {
-        return create_and_insert<binary_arith_node>(binary_arith_op::cmpgt, lhs,
+        if(lhs.type().type_class() == value_type_class::unsigned_integer) {
+            return create_and_insert<binary_arith_node>(binary_arith_op::cmpugt, lhs,
                                                     rhs);
+        } else {
+            return create_and_insert<binary_arith_node>(binary_arith_op::cmpgt, lhs,
+                                                    rhs);
+        }
     }
 
     /// @brief generic atomic binary node creator

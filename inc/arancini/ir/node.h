@@ -835,6 +835,7 @@ enum class binary_arith_op {
     cmpeq,
     cmpne,
     cmpgt,
+    cmpugt, //unsigned compare
     // floating point stuff
     cmpoeq,
     cmpolt,
