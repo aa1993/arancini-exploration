@@ -297,6 +297,13 @@ void mov_translator::do_translate() {
         break;
     }
 
+    case XED_ICLASS_CWDE:{
+        auto ax = read_reg(value_type::s16(), xedreg_to_offset(XED_REG_AX));
+        auto sx = builder().insert_sx(value_type::s32(), ax->val());
+
+        write_reg(xedreg_to_offset(XED_REG_EAX), sx->val());
+      break;
+    }
     default:
         throw std::runtime_error("unsupported mov operation");
     }

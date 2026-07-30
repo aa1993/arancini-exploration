@@ -165,6 +165,12 @@ class translator {
     ///        adding support for instructions
     void dump_xed_encoding(void);
 
+    value_node *bitmask_gt( value_node *v1, value_node *v2);
+    value_node *bitmask_lt( value_node *v1, value_node *v2);
+    value_node *saturate(value_type& target_type, value_node* v);
+    value_node *insert_max( value_node *v1, value_node *v2);
+    value_node *insert_min( value_node *v1, value_node *v2);
+
   private:
     ir_builder &builder_;
     xed_decoded_inst_t *xed_inst_;

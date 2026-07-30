@@ -39,41 +39,41 @@ template <> struct fmt::formatter<arancini::runtime::exec::x86::x86_cpu_state> {
     format(const arancini::runtime::exec::x86::x86_cpu_state &regs,
            FCTX &format_ctx) const {
         return fmt::format_to(
-            format_ctx.out(),
-            "RAX:        \t{:#x}\n"
-            "RBX:        \t{:#x}\n"
-            "RCX:        \t{:#x}\n"
-            "RDX:        \t{:#x}\n"
-            "RSI:        \t{:#x}\n"
-            "RDI:        \t{:#x}\n"
-            "RBP:        \t{:#x}\n"
-            "RSP:        \t{:#x}\n"
-            "RIP:        \t{:#x}\n"
-            "R8:         \t{:#x}\n"
-            "R9:         \t{:#x}\n"
-            "R10:        \t{:#x}\n"
-            "R11:        \t{:#x}\n"
-            "R12:        \t{:#x}\n"
-            "R13:        \t{:#x}\n"
-            "R14:        \t{:#x}\n"
-            "R15:        \t{:#x}\n"
-            "flag ZF:    \t{:#x}\n"
-            "flag CF:    \t{:#x}\n"
-            "flag OF:    \t{:#x}\n"
-            "flag SF:    \t{:#x}\n"
-            "flag PF:    \t{:#x}\n"
-            "flag DF:    \t{:#x}\n"
-            "ZMM0_HEX    \t{:#x} {:#x}\n"
-            "ZMM0_float32\t{:8.8f}, {:8.8f}, {:8.8f}, {:8.8f}\n"
-            "ZMM1:       \t{:#x} {:#x}\n"
-            "ZMM2:       \t{:#x} {:#x}\n"
-            "ZMM3:       \t{:#x} {:#x}\n"
-            "ZMM4:       \t{:#x} {:#x}\n"
-            "ZMM5:       \t{:#x} {:#x}\n"
-            "ZMM6:       \t{:#x} {:#x}\n"
-            "ZMM7:       \t{:#x} {:#x}\n"
-            "ZMM8:       \t{:#x} {:#x}\n"
-            "ZMM9:       \t{:#x} {:#x}\n"
+            format_ctx.out(),""//,
+//            "RAX:        \t{:#x}\n"
+//            "RBX:        \t{:#x}\n"
+//            "RCX:        \t{:#x}\n"
+//            "RDX:        \t{:#x}\n"
+//            "RSI:        \t{:#x}\n"
+//            "RDI:        \t{:#x}\n"
+//            "RBP:        \t{:#x}\n"
+//            "RSP:        \t{:#x}\n"
+//            "RIP:        \t{:#x}\n"
+//            "R8:         \t{:#x}\n"
+//            "R9:         \t{:#x}\n"
+//            "R10:        \t{:#x}\n"
+//            "R11:        \t{:#x}\n"
+//            "R12:        \t{:#x}\n"
+//            "R13:        \t{:#x}\n"
+//            "R14:        \t{:#x}\n"
+//            "R15:        \t{:#x}\n"
+//            "flag ZF:    \t{:#x}\n"
+//            "flag CF:    \t{:#x}\n"
+//            "flag OF:    \t{:#x}\n"
+//            "flag SF:    \t{:#x}\n"
+//            "flag PF:    \t{:#x}\n"
+//            "flag DF:    \t{:#x}\n"
+//            "ZMM0_HEX    \t{:#x} {:#x}\n"
+//            "ZMM0_float32\t{:8.8f}, {:8.8f}, {:8.8f}, {:8.8f}\n"
+//            "ZMM1:       \t{:#x} {:#x}\n"
+//            "ZMM2:       \t{:#x} {:#x}\n"
+//            "ZMM3:       \t{:#x} {:#x}\n"
+//            "ZMM4:       \t{:#x} {:#x}\n"
+//            "ZMM5:       \t{:#x} {:#x}\n"
+//            "ZMM6:       \t{:#x} {:#x}\n"
+//            "ZMM7:       \t{:#x} {:#x}\n"
+//            "ZMM8:       \t{:#x} {:#x}\n"
+//            "ZMM9:       \t{:#x} {:#x}\n"
 //            "ZMM10:       \t{:#x}\n"
 //            "ZMM11:       \t{:#x}\n"
 //            "ZMM12:       \t{:#x}\n"
@@ -108,10 +108,10 @@ template <> struct fmt::formatter<arancini::runtime::exec::x86::x86_cpu_state> {
 //            "X87 STS:    \t{:0>8b} {:0>8b}\n"
 //            "X87 TAG:    \t{:0>8b} {:0>8b}\n"
 //            "X87 Opcode: \t{:0>8b} {:0>8b}",
-            ,regs.RAX, regs.RBX, regs.RCX, regs.RDX, regs.RSI, regs.RDI,
-            regs.RBP, regs.RSP, regs.PC, regs.R8, regs.R9, regs.R10, regs.R11,
-            regs.R12, regs.R13, regs.R14, regs.R15, regs.ZF, regs.CF, regs.OF,
-            regs.SF, regs.PF, regs.DF
+//            ,regs.RAX, regs.RBX, regs.RCX, regs.RDX, regs.RSI, regs.RDI,
+//            regs.RBP, regs.RSP, regs.PC, regs.R8, regs.R9, regs.R10, regs.R11,
+//            regs.R12, regs.R13, regs.R14, regs.R15, regs.ZF, regs.CF, regs.OF,
+//            regs.SF, regs.PF, regs.DF
 //            *(uint64_t *)(regs.X87_STACK_BASE + 8 * 0),
 //            *(uint64_t *)(regs.X87_STACK_BASE + 8 * 1),
 //            *(uint64_t *)(regs.X87_STACK_BASE + 8 * 2),
@@ -124,20 +124,20 @@ template <> struct fmt::formatter<arancini::runtime::exec::x86::x86_cpu_state> {
 //            (regs.X87_STS >> 8) & 0xFF, regs.X87_STS & 0xFF,
 //            (regs.X87_TAG >> 8) & 0xFF, regs.X87_TAG & 0xFF,
 //            (regs.X87_OPCODE >> 8) & 0xFF, regs.X87_OPCODE & 0xFF);
-            , regs.ZMM0.low.low.high, regs.ZMM0.low.low.low
-            , detail::bit_cast<float>(static_cast<uint32_t>(regs.ZMM0.low.low.high >> 32))
-            , detail::bit_cast<float>(static_cast<uint32_t>(regs.ZMM0.low.low.high))
-            , detail::bit_cast<float>(static_cast<uint32_t>(regs.ZMM0.low.low.low >> 32))
-            , detail::bit_cast<float>(static_cast<uint32_t>(regs.ZMM0.low.low.low))
-            , regs.ZMM1.low.low.high, regs.ZMM1.low.low.low
-            , regs.ZMM2.low.low.high, regs.ZMM2.low.low.low
-            , regs.ZMM3.low.low.high, regs.ZMM3.low.low.low
-            , regs.ZMM4.low.low.high, regs.ZMM4.low.low.low
-            , regs.ZMM5.low.low.high, regs.ZMM5.low.low.low
-            , regs.ZMM6.low.low.high, regs.ZMM6.low.low.low
-            , regs.ZMM7.low.low.high, regs.ZMM7.low.low.low
-            , regs.ZMM8.low.low.high, regs.ZMM8.low.low.low
-            , regs.ZMM9.low.low.high, regs.ZMM9.low.low.low
+//            , regs.ZMM0.low.low.high, regs.ZMM0.low.low.low
+//            , detail::bit_cast<float>(static_cast<uint32_t>(regs.ZMM0.low.low.high >> 32))
+//            , detail::bit_cast<float>(static_cast<uint32_t>(regs.ZMM0.low.low.high))
+//            , detail::bit_cast<float>(static_cast<uint32_t>(regs.ZMM0.low.low.low >> 32))
+//            , detail::bit_cast<float>(static_cast<uint32_t>(regs.ZMM0.low.low.low))
+//            , regs.ZMM1.low.low.high, regs.ZMM1.low.low.low
+//            , regs.ZMM2.low.low.high, regs.ZMM2.low.low.low
+//            , regs.ZMM3.low.low.high, regs.ZMM3.low.low.low
+//            , regs.ZMM4.low.low.high, regs.ZMM4.low.low.low
+//            , regs.ZMM5.low.low.high, regs.ZMM5.low.low.low
+//            , regs.ZMM6.low.low.high, regs.ZMM6.low.low.low
+//            , regs.ZMM7.low.low.high, regs.ZMM7.low.low.low
+//            , regs.ZMM8.low.low.high, regs.ZMM8.low.low.low
+//            , regs.ZMM9.low.low.high, regs.ZMM9.low.low.low
                 //, regs.ZMM1, regs.ZMM2, regs.ZMM3, regs.ZMM4, regs.ZMM5, regs.ZMM6, regs.ZMM7, regs.ZMM8, regs.ZMM9, regs.ZMM10, regs.ZMM11, regs.ZMM12);
             );
     }

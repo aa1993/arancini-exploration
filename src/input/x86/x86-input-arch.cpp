@@ -54,6 +54,8 @@ static std::unique_ptr<translator> get_translator(ir_builder &builder,
     case XED_ICLASS_CWD:
     case XED_ICLASS_CDQ:
     case XED_ICLASS_CDQE:
+
+    case XED_ICLASS_CWDE:
         return std::make_unique<mov_translator>(builder);
 
     case XED_ICLASS_SETNBE:
@@ -272,9 +274,101 @@ static std::unique_ptr<translator> get_translator(ir_builder &builder,
     case XED_ICLASS_CVTTSD2SI:
 
     case XED_ICLASS_HADDPS:
-    case XED_ICLASS_UNPCKLPS:
-    case XED_ICLASS_MOVLHPS:
+    case XED_ICLASS_HADDPD:
     case XED_ICLASS_PHADDD:
+    case XED_ICLASS_PHADDW:
+
+    case XED_ICLASS_PADDUSB:
+    case XED_ICLASS_PADDUSW:
+    case XED_ICLASS_PADDSB:
+    case XED_ICLASS_PADDSW:
+
+    case XED_ICLASS_PHADDSW:
+
+    case XED_ICLASS_SUBPS:
+
+    case XED_ICLASS_HSUBPS:
+    case XED_ICLASS_HSUBPD:
+    case XED_ICLASS_PHSUBD:
+    case XED_ICLASS_PHSUBW:
+
+    case XED_ICLASS_PSUBUSB:
+    case XED_ICLASS_PSUBUSW:
+    case XED_ICLASS_PSUBSB:
+    case XED_ICLASS_PSUBSW:
+
+    case XED_ICLASS_PHSUBSW:
+
+    case XED_ICLASS_MULPD:
+    case XED_ICLASS_MULPS:
+    case XED_ICLASS_PMULDQ:
+    case XED_ICLASS_PMULHRSW:
+    case XED_ICLASS_PMULHUW:
+    case XED_ICLASS_PMULHW:
+    case XED_ICLASS_PMULLD:
+
+    case XED_ICLASS_DIVPS:
+    case XED_ICLASS_DIVPD:
+
+    case XED_ICLASS_ADDSUBPS:
+    case XED_ICLASS_ADDSUBPD:
+
+    case XED_ICLASS_MAXPD:
+    case XED_ICLASS_MAXPS:
+    case XED_ICLASS_MAXSD:
+    case XED_ICLASS_MAXSS:
+    case XED_ICLASS_PMAXSB:
+    case XED_ICLASS_PMAXSW:
+    case XED_ICLASS_PMAXSD:
+    case XED_ICLASS_PMAXUB:
+    case XED_ICLASS_PMAXUW:
+    case XED_ICLASS_PMAXUD:
+
+    case XED_ICLASS_MINPD:
+    case XED_ICLASS_MINPS:
+    case XED_ICLASS_MINSD:
+    case XED_ICLASS_MINSS:
+    case XED_ICLASS_PMINSB:
+    case XED_ICLASS_PMINSW:
+    case XED_ICLASS_PMINSD:
+    case XED_ICLASS_PMINUB:
+    case XED_ICLASS_PMINUW:
+    case XED_ICLASS_PMINUD:
+
+    case XED_ICLASS_PHMINPOSUW:
+
+    case XED_ICLASS_PABSB:
+    case XED_ICLASS_PABSW:
+    case XED_ICLASS_PABSD:
+
+    case XED_ICLASS_PAVGB:
+    case XED_ICLASS_PAVGW:
+
+    case XED_ICLASS_RSQRTPS:
+    case XED_ICLASS_RSQRTSS:
+    case XED_ICLASS_SQRTPD:
+    case XED_ICLASS_SQRTPS:
+    case XED_ICLASS_SQRTSS:
+
+    case XED_ICLASS_PSIGNB:
+    case XED_ICLASS_PSIGND:
+    case XED_ICLASS_PSIGNW:
+
+    case XED_ICLASS_PSLLQ:
+    case XED_ICLASS_PSLLW:
+
+    case XED_ICLASS_UNPCKLPD:
+    case XED_ICLASS_UNPCKLPS:
+
+    case XED_ICLASS_PINSRB:
+    case XED_ICLASS_PINSRD:
+    case XED_ICLASS_PINSRQ:
+    case XED_ICLASS_PINSRW:
+
+    case XED_ICLASS_DPPD:
+    case XED_ICLASS_DPPS:
+
+    case XED_ICLASS_MOVLHPS:
         return std::make_unique<fpvec_translator>(builder);
 
     case XED_ICLASS_PSHUFD:

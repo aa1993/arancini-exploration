@@ -1101,3 +1101,85 @@ value_type translator::type_of_operand(int opnum) {
                                std::to_string((int)opname));
     }
 }
+
+value_node *translator::bitmask_gt(value_node *v1, value_node *v2){
+    binary_arith_node* cond = (binary_arith_node*)builder_.insert_sub(v1->val(), v2->val());
+    value_node* zero = builder_.insert_constant_i(v1->val().type(), 0);
+    return builder_.insert_sub(zero->val(), cond->negative());
+}
+
+value_node *translator::bitmask_lt(value_node *v1, value_node *v2){
+    binary_arith_node* cond = (binary_arith_node*)builder_.insert_sub(v2->val(), v1->val());
+    value_node* zero = builder_.insert_constant_i(v1->val().type(), 0);
+    return builder_.insert_sub(zero->val(), cond->negative());
+}
+
+value_node *translator::saturate(value_type& target_type, value_node* v){
+    value_type& src_type = v->val().type();
+    if(target_type.width() > src_type.width()){
+        throw std::logic_error("saturation to a bigger type not supported");
+    }else if(target_type.width() == src_type.width()) {
+        return v;
+    } else {
+        value_node* max;
+        value_node* min;
+        value_node* zero = builder_.insert_constant_i(target_type, 0);
+        value_node* one = builder_.insert_constant_i(target_type, 1);
+        value_node* bitmask = builder_.insert_sub(zero->val(), one->val());
+        if(target_type.type_class() == value_type_class::signed_integer){
+            max = builder_.insert_lsr(bitmask->val(), one->val());
+            min = builder_.insert_xor(max->val(), bitmask->val());
+            max = builder_.insert_sx(src_type, max->val());
+            min = builder_.insert_sx(src_type, min->val());
+        } else {
+            max = bitmask;
+            max = builder_.insert_zx(src_type, max->val());
+            min = zero;
+            min = builder_.insert_zx(src_type, min->val());
+        }
+        value_node* bitmask_max = bitmask_gt(max, v);
+        value_node* bitmask_min = bitmask_lt(min, v);
+        value_node* bitmask_big = builder_.insert_sx(src_type, bitmask->val());
+        value_node* bitmask_tmp1 = builder_.insert_xor(bitmask_max->val(), bitmask_big->val());
+        value_node* bitmask_tmp2 = builder_.insert_xor(bitmask_min->val(), bitmask_big->val());
+        value_node* bitmask_v = builder_.insert_and(bitmask_tmp1->val(), bitmask_tmp2->val());
+        value_node* res_max = builder_.insert_and(max->val(), bitmask_max->val());
+        value_node* res_min = builder_.insert_and(min->val(), bitmask_min->val());
+        value_node* res_v = builder_.insert_and(v->val(), bitmask_v->val());
+        value_node* res = builder_.insert_xor(res_max->val(), res_min->val());
+        res = builder_.insert_xor(res->val(), res_v->val());
+        return builder_.insert_trunc(target_type, res->val());
+    }
+}
+
+value_node *translator::insert_max( value_node *v1, value_node *v2){
+//    value_node* zero = builder_.insert_constant_i(v1->val().type(), 0);
+//    value_node* one = builder_.insert_constant_i(v1->val().type(), 1);
+//    value_node* bitmask = builder_.insert_sub(zero->val(), one->val());
+//    value_node* v1_max_bitmask = bitmask_gt(v1, v2);
+//    value_node* v2_max_bitmask = bitmask_gt(v2, v1);
+//    value_node* eq_bitmask = builder_.insert_xor(v1_max_bitmask->val(), v2_max_bitmask->val());
+//    eq_bitmask = builder_.insert_xor(eq_bitmask->val(), bitmask->val());
+//    value_node* res_v1 = builder_.insert_and(v1->val(), v1_max_bitmask->val());
+//    value_node* res_v2 = builder_.insert_and(v2->val(), v2_max_bitmask->val());
+//    value_node* res_eq = builder_.insert_and(v1->val(), eq_bitmask->val());
+//    value_node* res = builder_.insert_xor(res_v1->val(), res_v2->val());
+//    //return builder_.insert_xor(res->val(), res_eq->val());
+//    return res_v1;
+      return builder_.insert_csel(builder_.insert_cmpgt(v1->val(), v2->val())->val(), v1->val(), v2->val());
+}
+
+value_node *translator::insert_min( value_node *v1, value_node *v2){
+    value_node* zero = builder_.insert_constant_i(v1->val().type(), 0);
+    value_node* one = builder_.insert_constant_i(v1->val().type(), 1);
+    value_node* bitmask = builder_.insert_sub(zero->val(), one->val());
+    value_node* v1_min_bitmask = bitmask_lt(v1, v2);
+    value_node* v2_min_bitmask = bitmask_lt(v2, v1);
+    value_node* eq_bitmask = builder_.insert_xor(v1_min_bitmask->val(), v2_min_bitmask->val());
+    eq_bitmask = builder_.insert_xor(eq_bitmask->val(), bitmask->val());
+    value_node* res_v1 = builder_.insert_and(v1->val(), v1_min_bitmask->val());
+    value_node* res_v2 = builder_.insert_and(v2->val(), v2_min_bitmask->val());
+    value_node* res_eq = builder_.insert_and(v1->val(), eq_bitmask->val());
+    value_node* res = builder_.insert_xor(res_v1->val(), res_v2->val());
+    return builder_.insert_xor(res->val(), res_eq->val());
+}
