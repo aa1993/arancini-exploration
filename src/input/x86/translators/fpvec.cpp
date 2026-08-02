@@ -109,6 +109,10 @@ void fpvec_translator::do_translate() {
     case XED_ICLASS_PSIGND:
     case XED_ICLASS_PSIGNW:
 
+    case XED_ICLASS_PANDN:
+    case XED_ICLASS_PMADDUBSW:
+    case XED_ICLASS_PMADDWD:
+
     case XED_ICLASS_PSLLQ:
     case XED_ICLASS_PSLLW:
 
@@ -137,6 +141,7 @@ void fpvec_translator::do_translate() {
     //case XED_ICLASS_DPPD:
     //case XED_ICLASS_DPPS:
 
+    //case XED_ICLASS_MPSADBW:
     }
 
     // xmm1.f32[4], xmm2.f32[4]
@@ -263,7 +268,7 @@ void fpvec_translator::do_translate() {
         }
         break;
     }
-    // xmm1.s16[8]/mm1.s16[4], ( (xmm2 | m128).s16[8]/(mm2 | m64).s16[4] ) imm8
+    // xmm1.s16[8]/mm1.s16[4], (xmm2 | m128).s16[8]/(mm2 | m64).s16[4]
     case XED_ICLASS_PHADDW:
     case XED_ICLASS_PADDSW:
     case XED_ICLASS_PHADDSW:
@@ -463,6 +468,16 @@ void fpvec_translator::do_translate() {
         imm = ((constant_node*)src2)->const_val_i() & 1;
         break;
     }
+    // xmm1.u8[16], xmm2.u8[16], imm8
+    case XED_ICLASS_MPSADBW:
+    {
+        dest = builder().insert_bitcast(
+            value_type::vector(value_type::u8(), 16), dest->val());
+        src1 = builder().insert_bitcast(
+            value_type::vector(value_type::u8(), 16), src1->val());
+        imm = ((constant_node*)src2)->const_val_i();
+        break;
+    }
     case XED_ICLASS_PSLLW:
     case XED_ICLASS_PSRAW:
     {
@@ -470,12 +485,12 @@ void fpvec_translator::do_translate() {
             dest = builder().insert_bitcast(
                     value_type::vector(value_type::s16(), 8), dest->val());
             src1 = builder().insert_bitcast(
-                    value_type::vector(value_type::s16(), 8), dest->val());
+                    value_type::vector(value_type::s16(), 8), src1->val());
         } else {
             dest = builder().insert_bitcast(
                     value_type::vector(value_type::s16(), 4), dest->val());
             src1 = builder().insert_bitcast(
-                    value_type::vector(value_type::s16(), 4), dest->val());
+                    value_type::vector(value_type::s16(), 4), src1->val());
         }
         src2 = builder().insert_trunc(value_type::u8(), src2->val());
         break;
@@ -486,12 +501,12 @@ void fpvec_translator::do_translate() {
             dest = builder().insert_bitcast(
                     value_type::vector(value_type::s32(), 4), dest->val());
             src1 = builder().insert_bitcast(
-                    value_type::vector(value_type::s32(), 4), dest->val());
+                    value_type::vector(value_type::s32(), 4), src1->val());
         } else {
             dest = builder().insert_bitcast(
                     value_type::vector(value_type::s32(), 2), dest->val());
             src1 = builder().insert_bitcast(
-                    value_type::vector(value_type::s32(), 2), dest->val());
+                    value_type::vector(value_type::s32(), 2), src1->val());
         }
         src2 = builder().insert_trunc(value_type::u8(), src2->val());
         break;
@@ -502,16 +517,60 @@ void fpvec_translator::do_translate() {
             dest = builder().insert_bitcast(
                     value_type::vector(value_type::s64(), 2), dest->val());
             src1 = builder().insert_bitcast(
-                    value_type::vector(value_type::s64(), 2), dest->val());
+                    value_type::vector(value_type::s64(), 2), src1->val());
         } else {
             dest = builder().insert_bitcast(
                     value_type::vector(value_type::s64(), 1), dest->val());
             src1 = builder().insert_bitcast(
-                    value_type::vector(value_type::s64(), 1), dest->val());
+                    value_type::vector(value_type::s64(), 1), src1->val());
         }
         src2 = builder().insert_trunc(value_type::u8(), src2->val());
         break;
     }
+    // xmm1.u128/mm1.u64, (xmm1 | m).u128/(mm | m).u64
+    case XED_ICLASS_PANDN:
+    {
+        break;
+    }
+    case XED_ICLASS_PMADDUBSW:
+    {
+        if (dest->val().type().width() == 128){
+            dest = builder().insert_bitcast(
+                    value_type::vector(value_type::s16(), 8), dest->val());
+            src1 = builder().insert_bitcast(
+                    value_type::vector(value_type::u8(), 16), src1->val());
+            src2 = builder().insert_bitcast(
+                    value_type::vector(value_type::s8(), 16), src2->val());
+        } else {
+            dest = builder().insert_bitcast(
+                    value_type::vector(value_type::s16(), 4), dest->val());
+            src1 = builder().insert_bitcast(
+                    value_type::vector(value_type::u8(), 8), src1->val());
+            src2 = builder().insert_bitcast(
+                    value_type::vector(value_type::s8(), 8), src2->val());
+        }
+        break;
+    }
+    case XED_ICLASS_PMADDWD:
+    {
+        if (dest->val().type().width() == 128){
+            dest = builder().insert_bitcast(
+                    value_type::vector(value_type::s32(), 4), dest->val());
+            src1 = builder().insert_bitcast(
+                    value_type::vector(value_type::s16(), 8), src1->val());
+            src2 = builder().insert_bitcast(
+                    value_type::vector(value_type::s16(), 8), src2->val());
+        } else {
+            dest = builder().insert_bitcast(
+                    value_type::vector(value_type::s32(), 2), dest->val());
+            src1 = builder().insert_bitcast(
+                    value_type::vector(value_type::s16(), 4), src1->val());
+            src2 = builder().insert_bitcast(
+                    value_type::vector(value_type::s16(), 4), src2->val());
+        }
+        break;
+    }
+
     case XED_ICLASS_CVTSD2SS:
     case XED_ICLASS_CVTSD2SI:
     case XED_ICLASS_CVTTSD2SI: {
@@ -1294,6 +1353,91 @@ void fpvec_translator::do_translate() {
             }
         }
         write_operand(0, dest->val());
+        break;
+    }
+    case XED_ICLASS_PANDN:
+    {
+        src1 = builder().insert_not(src1->val());
+        dest = builder().insert_and(src1->val(), src2->val());
+        write_operand(0, dest->val());
+        break;
+    }
+    case XED_ICLASS_PMADDUBSW:
+    {
+        size_t vector_len = dest->val().type().nr_elements();
+        value_type sw_type = value_type(value_type_class::signed_integer, 16);
+        value_type sd_type = value_type(value_type_class::signed_integer, 32);
+        for(int i=0 ; i<vector_len ; i++){
+            value_node* element1_1 = builder().insert_vector_extract(src1->val(), i*2);
+            value_node* element1_2 = builder().insert_vector_extract(src1->val(), i*2+1);
+            value_node* element2_1 = builder().insert_vector_extract(src2->val(), i*2);
+            value_node* element2_2 = builder().insert_vector_extract(src2->val(), i*2+1);
+
+            element1_1 = builder().insert_zx(sd_type, element1_1->val());
+            element1_2 = builder().insert_zx(sd_type, element1_2->val());
+            element2_1 = builder().insert_sx(sd_type, element2_1->val());
+            element2_2 = builder().insert_sx(sd_type, element2_2->val());
+
+            element1_1 = builder().insert_mul(element1_1->val(), element2_1->val());
+            element1_2 = builder().insert_mul(element1_2->val(), element2_2->val());
+
+            element1_1 = builder().insert_add(element1_1->val(), element1_2->val());
+
+            value_node* res = saturate(sw_type, element1_1);
+ 
+            dest = builder().insert_vector_insert(dest->val(), i, res->val());
+        }
+        write_operand(0, dest->val());
+        break;
+    }
+    case XED_ICLASS_PMADDWD:
+    {
+        size_t vector_len = dest->val().type().nr_elements();
+        value_type target_type = value_type::s32();
+        for(int i = 0; i<vector_len;i++){
+            value_node* element1_1 = builder().insert_vector_extract(src1->val(), i*2);
+            value_node* element1_2 = builder().insert_vector_extract(src1->val(), i*2+1);
+            value_node* element2_1 = builder().insert_vector_extract(src2->val(), i*2);
+            value_node* element2_2 = builder().insert_vector_extract(src2->val(), i*2+1);
+
+            element1_1 = builder().insert_sx(target_type, element1_1->val());
+            element1_2 = builder().insert_sx(target_type, element1_2->val());
+            element2_1 = builder().insert_sx(target_type, element2_1->val());
+            element2_2 = builder().insert_sx(target_type, element2_2->val());
+
+            element1_1 = builder().insert_mul(element1_1->val(), element2_1->val());
+            element1_2 = builder().insert_mul(element1_2->val(), element2_2->val());
+
+            element1_1 = builder().insert_add(element1_1->val(), element1_2->val());
+ 
+            dest = builder().insert_vector_insert(dest->val(), i, element1_1->val());
+        }
+        write_operand(0, dest->val());
+        break;
+    }
+    case XED_ICLASS_MPSADBW:
+    {
+        int blk1_offset = (imm & 0b11) * 4;
+        int blk2_offset = ((imm & 0b100)>>2) * 4;
+        value_node* src1_byte[11];
+        value_node* src2_byte[4];
+        for( int i = 0; i<11;i++){
+            src1_byte[i] = builder().insert_zx(value_type::s16(), builder().insert_vector_extract(dest->val(), i+blk1_offset)->val());
+        }
+        for( int i = 0; i<4;i++){
+            src2_byte[i] = builder().insert_zx(value_type::s16(), builder().insert_vector_extract(src1->val(), i+blk2_offset)->val());
+        }
+        value_node* res = builder().insert_bitcast(
+            value_type::vector(value_type::s16(), 8), dest->val());
+        for(int i = 0; i<8;i++){
+            value_node* temp0 = absolute(builder().insert_sub(src1_byte[i]->val(), src2_byte[0]->val()));
+            value_node* temp1 = absolute(builder().insert_sub(src1_byte[i+1]->val(), src2_byte[1]->val()));
+            value_node* temp2 = absolute(builder().insert_sub(src1_byte[i+2]->val(), src2_byte[2]->val()));
+            value_node* temp3 = absolute(builder().insert_sub(src1_byte[i+3]->val(), src2_byte[3]->val()));
+            temp0 = builder().insert_add(builder().insert_add(temp0->val(), temp1->val())->val(), builder().insert_add(temp2->val(), temp3->val())->val());
+            res = builder().insert_vector_insert(res->val(), i, temp0->val());
+        }
+        write_operand(0, res->val());
         break;
     }
     case XED_ICLASS_PSLLQ:

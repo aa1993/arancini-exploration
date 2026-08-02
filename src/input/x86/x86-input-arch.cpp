@@ -368,6 +368,13 @@ static std::unique_ptr<translator> get_translator(ir_builder &builder,
     case XED_ICLASS_DPPD:
     case XED_ICLASS_DPPS:
 
+    case XED_ICLASS_PANDN:
+
+    case XED_ICLASS_PMADDUBSW:
+    case XED_ICLASS_PMADDWD:
+
+    case XED_ICLASS_MPSADBW:
+
     case XED_ICLASS_MOVLHPS:
         return std::make_unique<fpvec_translator>(builder);
 

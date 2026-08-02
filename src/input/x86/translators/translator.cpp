@@ -1183,3 +1183,10 @@ value_node *translator::insert_min( value_node *v1, value_node *v2){
     value_node* res = builder_.insert_xor(res_v1->val(), res_v2->val());
     return builder_.insert_xor(res->val(), res_eq->val());
 }
+
+value_node *translator::absolute(value_node *v){
+    value_node* zero = builder_.insert_constant_s8(0);
+    value_node* negative = builder_.insert_cmpgt(zero->val(), v->val());
+    value_node* negative_one = builder_.insert_constant_s8(-1);
+    return builder_.insert_csel(negative->val(), builder_.insert_mul(v->val(), negative_one->val())->val(), v->val());
+}
