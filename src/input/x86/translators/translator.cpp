@@ -1114,7 +1114,7 @@ value_node *translator::bitmask_lt(value_node *v1, value_node *v2){
     return builder_.insert_sub(zero->val(), cond->negative());
 }
 
-value_node *translator::saturate(value_type& target_type, value_node* v){
+/*value_node *translator::saturate(value_type& target_type, value_node* v){
     value_type& src_type = v->val().type();
     if(target_type.width() > src_type.width()){
         throw std::logic_error("saturation to a bigger type not supported");
@@ -1149,6 +1149,37 @@ value_node *translator::saturate(value_type& target_type, value_node* v){
         value_node* res = builder_.insert_xor(res_max->val(), res_min->val());
         res = builder_.insert_xor(res->val(), res_v->val());
         return builder_.insert_trunc(target_type, res->val());
+    }
+}*/
+
+value_node *translator::saturate(value_type& target_type, value_node* v){
+    value_type& src_type = v->val().type();
+    if(target_type.width() > src_type.width()){
+        throw std::logic_error("saturation to a bigger type not supported");
+    }else if(target_type.width() == src_type.width()) {
+        return v;
+    } else {
+        value_node* max;
+        value_node* min;
+        value_node* zero = builder_.insert_constant_i(target_type, 0);
+        value_node* one = builder_.insert_constant_i(target_type, 1);
+        value_node* bitmask = builder_.insert_sub(zero->val(), one->val());
+        if(target_type.type_class() == value_type_class::signed_integer){
+            max = builder_.insert_lsr(bitmask->val(), one->val());
+            min = builder_.insert_xor(max->val(), bitmask->val());
+            max = builder_.insert_sx(src_type, max->val());
+            min = builder_.insert_sx(src_type, min->val());
+        } else {
+            max = bitmask;
+            max = builder_.insert_zx(src_type, max->val());
+            min = zero;
+            min = builder_.insert_zx(src_type, min->val());
+        }
+        value_node* gt_max = builder().insert_cmpgt(v->val(), max->val());
+        value_node* lt_min = builder().insert_cmpgt(min->val(), v->val());
+        v = builder().insert_csel(gt_max->val(), max->val(), v->val());
+        v = builder().insert_csel(lt_min->val(), min->val(), v->val());
+        return builder_.insert_trunc(target_type, v->val());
     }
 }
 
@@ -1185,8 +1216,25 @@ value_node *translator::insert_min( value_node *v1, value_node *v2){
 }
 
 value_node *translator::absolute(value_node *v){
-    value_node* zero = builder_.insert_constant_s8(0);
+    if(v->val().type().type_class() == value_type_class::floating_point){
+        throw std::logic_error("absolute function is not for floating points");
+    }
+    if(v->val().type().type_class() == value_type_class::unsigned_integer){
+      return v;
+    }
+    value_node* zero = builder_.insert_constant_i(v->val().type(), 0);
     value_node* negative = builder_.insert_cmpgt(zero->val(), v->val());
-    value_node* negative_one = builder_.insert_constant_s8(-1);
+    value_node* negative_one = builder_.insert_constant_i(v->val().type(), -1);
     return builder_.insert_csel(negative->val(), builder_.insert_mul(v->val(), negative_one->val())->val(), v->val());
+}
+
+value_node *translator::saturate_to_unsigned(value_node *v){
+    if(v->val().type().type_class() != value_type_class::signed_integer){
+        throw std::logic_error("convert to unsigned only from signed possible");
+    }
+    value_node* zero = builder_.insert_constant_i(v->val().type(), 0);
+    value_node* cond = builder_.insert_cmpgt(zero->val(), v->val());
+    zero = builder_.insert_bitcast(zero->val().type().get_unsigned_type(), zero->val());
+    value_node* res = builder_.insert_bitcast(v->val().type().get_unsigned_type(), v->val());
+    return builder_.insert_csel(cond->val(), zero->val(), res->val());
 }

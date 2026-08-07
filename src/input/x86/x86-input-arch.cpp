@@ -238,7 +238,7 @@ static std::unique_ptr<translator> get_translator(ir_builder &builder,
     case XED_ICLASS_PUNPCKHWD:
     case XED_ICLASS_PUNPCKHDQ:
     case XED_ICLASS_PUNPCKHQDQ:
-    case XED_ICLASS_PACKUSWB:
+    //case XED_ICLASS_PACKUSWB:
     case XED_ICLASS_PACKSSWB:
     case XED_ICLASS_PACKSSDW:
     case XED_ICLASS_PEXTRW:
@@ -357,8 +357,28 @@ static std::unique_ptr<translator> get_translator(ir_builder &builder,
     case XED_ICLASS_PSLLQ:
     case XED_ICLASS_PSLLW:
 
+    case XED_ICLASS_PSRAD:
+    case XED_ICLASS_PSRAW:
+
+    case XED_ICLASS_RCPPS:
+    case XED_ICLASS_RCPSS:
+
+    case XED_ICLASS_EXTRACTPS:
+    case XED_ICLASS_INSERTPS:
+
     case XED_ICLASS_UNPCKLPD:
     case XED_ICLASS_UNPCKLPS:
+    case XED_ICLASS_UNPCKHPS:
+
+    case XED_ICLASS_BLENDPD:
+    case XED_ICLASS_BLENDPS:
+    case XED_ICLASS_PBLENDW:
+    case XED_ICLASS_BLENDVPD:
+    case XED_ICLASS_BLENDVPS:
+    case XED_ICLASS_PBLENDVB:
+
+    case XED_ICLASS_PACKUSDW:
+    case XED_ICLASS_PACKUSWB:
 
     case XED_ICLASS_PINSRB:
     case XED_ICLASS_PINSRD:

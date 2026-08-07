@@ -171,6 +171,7 @@ class translator {
     value_node *insert_max( value_node *v1, value_node *v2);
     value_node *insert_min( value_node *v1, value_node *v2);
     value_node *absolute(value_node *v);
+    value_node *saturate_to_unsigned(value_node *v);
 
   private:
     ir_builder &builder_;

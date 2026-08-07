@@ -15,7 +15,6 @@ void fpvec_translator::do_translate() {
     auto src1 = read_operand(1);
     auto src2 = read_operand(2);
     int imm;
-
     switch (xed_decoded_inst_get_iclass(xed_inst())) {
     case XED_ICLASS_SUBPD:
     case XED_ICLASS_ADDPD:
@@ -126,6 +125,12 @@ void fpvec_translator::do_translate() {
     case XED_ICLASS_UNPCKLPD:
     case XED_ICLASS_UNPCKLPS:
 
+    case XED_ICLASS_BLENDVPD:
+    case XED_ICLASS_BLENDVPS:
+    case XED_ICLASS_PBLENDVB:
+
+    case XED_ICLASS_PACKUSDW:
+    case XED_ICLASS_PACKUSWB:
 
     case XED_ICLASS_MOVLHPS:
     {
@@ -142,6 +147,14 @@ void fpvec_translator::do_translate() {
     //case XED_ICLASS_DPPS:
 
     //case XED_ICLASS_MPSADBW:
+
+    //case XED_ICLASS_EXTRACTPS:
+    //case XED_ICLASS_INSERTPS:
+
+    //case XED_ICLASS_BLENDPD:
+    //case XED_ICLASS_BLENDPS:
+    //case XED_ICLASS_PBLENDW:
+
     }
 
     // xmm1.f32[4], xmm2.f32[4]
@@ -161,6 +174,7 @@ void fpvec_translator::do_translate() {
     case XED_ICLASS_SQRTPS:
     case XED_ICLASS_RCPPS:
     case XED_ICLASS_UNPCKHPS:
+    case XED_ICLASS_BLENDVPS:
     {
         dest = builder().insert_bitcast(
             value_type::vector(value_type::f32(), 4), dest->val());
@@ -182,6 +196,7 @@ void fpvec_translator::do_translate() {
     case XED_ICLASS_ADDSUBPD:
     case XED_ICLASS_SQRTPD:
     case XED_ICLASS_UNPCKLPD:
+    case XED_ICLASS_BLENDVPD:
     {
         dest = builder().insert_bitcast(
             value_type::vector(value_type::f64(), 2), dest->val());
@@ -250,6 +265,7 @@ void fpvec_translator::do_translate() {
     case XED_ICLASS_PMAXSB:
     case XED_ICLASS_PMINSB:
     case XED_ICLASS_PSIGNB:
+    case XED_ICLASS_PBLENDVB:
     {
         if (dest->val().type().width() == 128){
         dest = builder().insert_bitcast(
@@ -281,6 +297,7 @@ void fpvec_translator::do_translate() {
     case XED_ICLASS_PMAXSW:
     case XED_ICLASS_PMINSW:
     case XED_ICLASS_PSIGNW:
+    case XED_ICLASS_PACKUSWB:
     {
         if (dest->val().type().width() == 128){
         dest = builder().insert_bitcast(
@@ -308,6 +325,7 @@ void fpvec_translator::do_translate() {
     case XED_ICLASS_PMAXSD:
     case XED_ICLASS_PMINSD:
     case XED_ICLASS_PSIGND:
+    case XED_ICLASS_PACKUSDW:
     {
         if (dest->val().type().width() == 128){
         dest = builder().insert_bitcast(
@@ -397,25 +415,53 @@ void fpvec_translator::do_translate() {
         }
         break;
     }
-    // xmm1.f32[4],(xmm2/ m138).f32[4}, imm8
+    // xmm1.f32[4],(xmm2/ m128).f32[4], imm8
     case XED_ICLASS_DPPS:
+    case XED_ICLASS_BLENDPS:
     {
         dest = builder().insert_bitcast(
             value_type::vector(value_type::f32(), 4), dest->val());
         src1 = builder().insert_bitcast(
             value_type::vector(value_type::f32(), 4), src1->val());
         imm = ((constant_node*)src2)->const_val_i();
+        break;
     }
-    // xmm1.f64[2],(xmm2/ m138).f64[2}, imm8
+    // xmm1.f64[2],(xmm2/ m128).f64[2], imm8
     case XED_ICLASS_DPPD:
+    case XED_ICLASS_BLENDPD:
     {
         dest = builder().insert_bitcast(
             value_type::vector(value_type::f64(), 2), dest->val());
         src1 = builder().insert_bitcast(
             value_type::vector(value_type::f64(), 2), src1->val());
         imm = ((constant_node*)src2)->const_val_i();
+        break;
     }
-    // xmm1.s8[16]/mm1.s8[8], s8, imm8
+    // xmm1.s16[8],(xmm2/ m128).s16[8], imm8
+    case XED_ICLASS_PBLENDW:
+    {
+        dest = builder().insert_bitcast(
+            value_type::vector(value_type::s16(), 8), dest->val());
+        src1 = builder().insert_bitcast(
+            value_type::vector(value_type::s16(), 8), src1->val());
+        imm = ((constant_node*)src2)->const_val_i();
+        break;
+    }
+    // xmm1.f32[4], xmm2.f32[4]/m32.f32, imm8
+    case XED_ICLASS_INSERTPS:
+    {
+        dest = builder().insert_bitcast(
+                value_type::vector(value_type::f32(), 4), dest->val());
+        if(src1->val().type().width() == 32){
+            src1 = builder().insert_bitcast(value_type::f32(), src1->val());
+        } else {
+            src1 = builder().insert_bitcast(
+                value_type::vector(value_type::f32(), 4), src1->val());
+        }
+        imm = ((constant_node*)src2)->const_val_i();
+        break;
+    }
+    // xmm1.s8[16], (r32/m8).s8, imm8
     case XED_ICLASS_PINSRB:
     {
         dest = builder().insert_bitcast(
@@ -429,15 +475,17 @@ void fpvec_translator::do_translate() {
         imm = ((constant_node*)src2)->const_val_i() & 1111;
         break;
     }
-    // xmm1.s16[8]/mm1.s16[4], s16, imm8
+    // xmm1.s16[8]/mm1.s16[4], (r32/m16).s16, imm8
     case XED_ICLASS_PINSRW:
     {
         if (dest->val().type().width() == 128){
             dest = builder().insert_bitcast(
                 value_type::vector(value_type::s16(), 8), dest->val());
+            imm = ((constant_node*)src2)->const_val_i() & 111;
         }else{
             dest = builder().insert_bitcast(
                 value_type::vector(value_type::s16(), 4), dest->val());
+            imm = ((constant_node*)src2)->const_val_i() & 11;
         }
         if (src1->val().type().width() == 32){
             src1 = builder().insert_bitcast(value_type::s32(), src1->val());
@@ -445,10 +493,9 @@ void fpvec_translator::do_translate() {
         } else {
             src1 = builder().insert_bitcast(value_type::s16(), src1->val());
         }
-        imm = ((constant_node*)src2)->const_val_i() & 11;
         break;
     }
-    // xmm1.s32[4]/mm1.s32[2], s32, imm8
+    // xmm1.s32[4], (r/m)32.s32, imm8
     case XED_ICLASS_PINSRD:
     {
         dest = builder().insert_bitcast(
@@ -458,7 +505,7 @@ void fpvec_translator::do_translate() {
         imm = ((constant_node*)src2)->const_val_i() & 11;
         break;
     }
-    // xmm1.s64[2]/mm1.s64[1], s64, imm8
+    // xmm1.s64[2], (r/m)64.s64, imm8
     case XED_ICLASS_PINSRQ:
     {
         dest = builder().insert_bitcast(
@@ -466,6 +513,16 @@ void fpvec_translator::do_translate() {
         src1 = builder().insert_bitcast(
                 value_type::s64(), src1->val());
         imm = ((constant_node*)src2)->const_val_i() & 1;
+        break;
+    }
+    // (m/r)32.f32 , xmm1.f32[4], imm8
+    case XED_ICLASS_EXTRACTPS:
+    {
+        dest = builder().insert_bitcast(
+                value_type::f32(), dest->val());
+        src1 = builder().insert_bitcast(
+                value_type::vector(value_type::f32(), 4), src1->val());
+        imm = ((constant_node*)src2)->const_val_i();
         break;
     }
     // xmm1.u8[16], xmm2.u8[16], imm8
@@ -858,7 +915,7 @@ void fpvec_translator::do_translate() {
         size_t vector_len = src1->val().type().nr_elements();
         size_t width = src1->val().type().element_width();
         value_type single_type = value_type(src1->val().type().type_class(), width);
-        value_type double_type = value_type(src1->val().type().type_class(), width *2);
+        value_type double_type = value_type(value_type_class::signed_integer, width *2);
         for(int i=0; i < vector_len; i++){
             value_node* minuend = builder().insert_vector_extract(src1->val(), i);
             value_node* subtrahend = builder().insert_vector_extract(src2->val(), i);
@@ -873,6 +930,9 @@ void fpvec_translator::do_translate() {
 
             value_node* difference = builder().insert_sub(minuend->val(), subtrahend->val());
 
+            if(single_type.type_class() == value_type_class::unsigned_integer){
+                difference = saturate_to_unsigned(difference);
+            }
             difference = saturate(single_type, difference);
 
             dest = builder().insert_vector_insert(dest->val(), i, difference->val());
@@ -998,8 +1058,8 @@ void fpvec_translator::do_translate() {
             auto factor1 = builder().insert_vector_extract(src1->val(), i);
             auto factor2 = builder().insert_vector_extract(src2->val(), i);
 
-            factor1 = builder().insert_zx(value_type::s32(), factor1->val());
-            factor2 = builder().insert_zx(value_type::s32(), factor2->val());
+            factor1 = builder().insert_sx(value_type::s32(), factor1->val());
+            factor2 = builder().insert_sx(value_type::s32(), factor2->val());
             factor1 = builder().insert_mul(factor1->val(), factor2->val());
             factor1 = builder().insert_lsr(factor1->val(), builder().insert_constant_s8(16)->val());
             factor1 = builder().insert_trunc(value_type::s16(), factor1->val());
@@ -1113,20 +1173,25 @@ void fpvec_translator::do_translate() {
     // Scalar Max
     case XED_ICLASS_MAXSD:
     case XED_ICLASS_MAXSS: {
-        auto element1 = builder().insert_vector_extract(src1->val(), 0);
-        auto element2 = builder().insert_vector_extract(src2->val(), 0);
+//        auto element1 = src1;
+//        auto element2 = src2;
+//        value_node* one_gt_cmp = builder().insert_cmpgt(element1->val(), element2->val());
+//        cond_br_node* one_gt_br = (cond_br_node*)builder().insert_cond_br(one_gt_cmp->val(), nullptr);
+//        auto dest2 = builder().insert_vector_insert(dest->val(), 0, element2->val());
+//        write_operand(0, dest2->val());
+//        br_node* end_br = (br_node*)builder().insert_br(nullptr);
+//        label_node* one_gt_label = builder().insert_label("one_gt");
+//        one_gt_br->add_br_target(one_gt_label);
+//        auto dest1 = builder().insert_vector_insert(dest->val(), 0, element1->val());
+//        write_operand(0, dest1->val());
+//        label_node* end_label = builder().insert_label("end");
+//        end_br->add_br_target(end_label);
+//
 
-        value_node* one_gt_cmp = builder().insert_cmpgt(element1->val(), element2->val());
-        cond_br_node* one_gt_br = (cond_br_node*)builder().insert_cond_br(one_gt_cmp->val(), nullptr);
-        auto dest2 = builder().insert_vector_insert(dest->val(), 0, element2->val());
-        write_operand(0, dest2->val());
-        br_node* end_br = (br_node*)builder().insert_br(nullptr);
-        label_node* one_gt_label = builder().insert_label("one_gt");
-        one_gt_br->add_br_target(one_gt_label);
-        auto dest1 = builder().insert_vector_insert(dest->val(), 0, element1->val());
-        write_operand(0, dest1->val());
-        label_node* end_label = builder().insert_label("end");
-        end_br->add_br_target(end_label);
+        value_node* res = builder().insert_csel(builder().insert_cmpgt(src1->val(), src2->val())->val(), src1->val(), src2->val());
+        dest = builder().insert_vector_insert(dest->val(), 0, res->val());
+        write_operand(0, dest->val());
+        
         break;
     }
     // Packed Min
@@ -1144,9 +1209,8 @@ void fpvec_translator::do_translate() {
             value_node* element2 = builder().insert_vector_extract(src2->val(), i);
 
             element1 = builder().insert_csel(builder().insert_cmpgt(element2->val(), element1->val())->val(), element1->val(), element2->val());
-            value_node* res = insert_min(element1, element2);
 
-            dest = builder().insert_vector_insert(dest->val(), i, res->val());
+            dest = builder().insert_vector_insert(dest->val(), i, element1->val());
         }
         write_operand(0, dest->val());
         break;
@@ -1155,20 +1219,24 @@ void fpvec_translator::do_translate() {
     case XED_ICLASS_MINSD:
     case XED_ICLASS_MINSS: {
 
-        auto element1 = builder().insert_vector_extract(src1->val(), 0);
-        auto element2 = builder().insert_vector_extract(src2->val(), 0);
+//        auto element1 = src1;
+//        auto element2 = src2;
+//
+//        value_node* one_gt_cmp = builder().insert_cmpgt(element1->val(), element2->val());
+//        cond_br_node* one_gt_br = (cond_br_node*)builder().insert_cond_br(one_gt_cmp->val(), nullptr);
+//        auto dest1 = builder().insert_vector_insert(dest->val(), 0, element1->val());
+//        write_operand(0, dest1->val());
+//        br_node* end_br = (br_node*)builder().insert_br(nullptr);
+//        label_node* one_gt_label = builder().insert_label("one_gt");
+//        one_gt_br->add_br_target(one_gt_label);
+//        auto dest2 = builder().insert_vector_insert(dest->val(), 0, element2->val());
+//        write_operand(0, dest2->val());
+//        label_node* end_label = builder().insert_label("end");
+//        end_br->add_br_target(end_label);
 
-        value_node* one_gt_cmp = builder().insert_cmpgt(element1->val(), element2->val());
-        cond_br_node* one_gt_br = (cond_br_node*)builder().insert_cond_br(one_gt_cmp->val(), nullptr);
-        auto dest1 = builder().insert_vector_insert(dest->val(), 0, element1->val());
-        write_operand(0, dest1->val());
-        br_node* end_br = (br_node*)builder().insert_br(nullptr);
-        label_node* one_gt_label = builder().insert_label("one_gt");
-        one_gt_br->add_br_target(one_gt_label);
-        auto dest2 = builder().insert_vector_insert(dest->val(), 0, element2->val());
-        write_operand(0, dest2->val());
-        label_node* end_label = builder().insert_label("end");
-        end_br->add_br_target(end_label);
+        value_node* res = builder().insert_csel(builder().insert_cmpgt(src1->val(), src2->val())->val(), src2->val(), src1->val());
+        dest = builder().insert_vector_insert(dest->val(), 0, res->val());
+        write_operand(0, dest->val());
 
         break;
     }
@@ -1176,20 +1244,11 @@ void fpvec_translator::do_translate() {
     {
         value_node* curr_min = builder().insert_vector_extract(src2->val(), 0);
         value_node* curr_index = builder().insert_constant_u16(0);
-        value_node* bitmask = builder().insert_constant_u16(65535); //0x1111111111111111
-        value_node* curr_bitmask;
-        curr_bitmask = bitmask;
-        value_node* next_bitmask = builder().insert_constant_u16(0);
         for(unsigned short i = 1; i<8;i++){
             value_node* next_val = builder().insert_vector_extract(src2->val(), i);
-            next_bitmask = bitmask_lt(next_val, curr_min);
-            curr_bitmask = builder().insert_xor(next_bitmask->val(), curr_bitmask->val());
-            curr_min = builder().insert_xor(
-                                  builder().insert_and(curr_min->val(), curr_bitmask->val())->val(),
-                                  builder().insert_and(next_val->val(), next_bitmask->val())->val());
-            curr_index = builder().insert_xor(
-                                  builder().insert_and(curr_index->val(), curr_bitmask->val())->val(),
-                                  builder().insert_and(builder().insert_constant_u16(i)->val(), next_bitmask->val())->val());
+            value_node* cmp_lt = builder().insert_cmpgt(curr_min->val(), next_val->val());
+            curr_index = builder().insert_csel(cmp_lt->val(), builder().insert_constant_u16(i)->val(), curr_index->val());
+            curr_min = builder().insert_csel(cmp_lt->val(), next_val->val(), curr_min->val());
         }
         dest = builder().insert_vector_insert(dest->val(), 0, curr_min->val());
         dest = builder().insert_vector_insert(dest->val(), 1, curr_index->val());
@@ -1203,11 +1262,11 @@ void fpvec_translator::do_translate() {
 //        for(int i = 1;i<4;i++){
 //            dest = builder().insert_vector_insert(dest->val(), i, zero->val());
 //        }
+        dest = builder().insert_bitcast(value_type::u128(), dest->val());
         dest = builder().insert_zx(value_type::u512(), dest->val());
         write_operand(0, dest->val());
         break;
     }
-    // controlflow problem
     case XED_ICLASS_PABSB:
     case XED_ICLASS_PABSW:
     case XED_ICLASS_PABSD:{
@@ -1215,16 +1274,11 @@ void fpvec_translator::do_translate() {
         value_node* zero = builder().insert_constant_s8(0);
         value_node* negativ_one = builder().insert_constant_s8(-1);
         for(int i = 0; i < vector_len; i++){
-            value_node* element = builder().insert_vector_extract(src1->val(), i);
+            value_node* element = builder().insert_vector_extract(src2->val(), i);
             value_node* negativ_cmp = builder().insert_cmpgt(zero->val(), element->val());
-            cond_br_node* negativ_br = (cond_br_node*)builder().insert_cond_br(negativ_cmp->val(), nullptr);
-            br_node* end_br = (br_node*)builder().insert_br(nullptr);
-            label_node* negativ_label = builder().insert_label("negativ");
-            negativ_br->add_br_target(negativ_label);
-            element = builder().insert_mul(element->val(), negativ_one->val());
-            label_node* end_label = builder().insert_label("end");
-            end_br->add_br_target(end_label);
-            dest = builder().insert_vector_insert(dest->val(), i, element->val());
+            value_node* neg_elem = builder().insert_mul(element->val(), negativ_one->val());
+            value_node* res = builder().insert_csel(negativ_cmp->val(), neg_elem->val(), element->val());
+            dest = builder().insert_vector_insert(dest->val(), i, res->val());
         }
         write_operand(0, dest->val());
         break;
@@ -1238,9 +1292,9 @@ void fpvec_translator::do_translate() {
         value_type double_type = value_type(value_type_class::unsigned_integer, double_size, 1);
         value_node* one = builder().insert_constant_u8(1);
         for(int i = 0; i < vector_len; i++){
-            value_node* element1 = builder().insert_vector_extract(dest->val(), i);
+            value_node* element1 = builder().insert_vector_extract(src1->val(), i);
             element1 = builder().insert_zx(double_type, element1->val());
-            value_node* element2 = builder().insert_vector_extract(src1->val(), i);
+            value_node* element2 = builder().insert_vector_extract(src2->val(), i);
             element2 = builder().insert_zx(double_type, element2->val());
             element1 = builder().insert_add(element1->val(), element2->val());
             element1 = builder().insert_add(element1->val(), one->val());
@@ -1255,9 +1309,14 @@ void fpvec_translator::do_translate() {
     case XED_ICLASS_SQRTPD:
     case XED_ICLASS_SQRTPS:
     {
-        auto res = builder().insert_sqrt(src2->val());
+        size_t vector_len = dest->val().type().nr_elements();
+        for(int i = 0; i<vector_len;i++){
+            value_node* element = builder().insert_vector_extract(src2->val(), i);
+            element = builder().insert_sqrt(element->val());
+            dest = builder().insert_vector_insert(dest->val(), i, element->val());
+        }
 
-        write_operand(0, res->val());
+        write_operand(0, dest->val());
         break;
     }
     // Solar Squareroot
@@ -1272,20 +1331,20 @@ void fpvec_translator::do_translate() {
     }
     case XED_ICLASS_RSQRTPS:
     {
-        value_node* one = builder().insert_constant_f32(1);
-        dest = builder().insert_vector_insert(dest->val(), 0, one->val());
-        dest = builder().insert_vector_insert(dest->val(), 1, one->val());
-        dest = builder().insert_vector_insert(dest->val(), 2, one->val());
-        dest = builder().insert_vector_insert(dest->val(), 3, one->val());
-        dest = builder().insert_div(dest->val(), builder().insert_sqrt(src2->val())->val());
-
+        value_node* one = builder().insert_constant_f32(1.0f);
+        for(int i=0; i<4;i++){
+            value_node* element = builder().insert_vector_extract(src2->val(), i);
+            element = builder().insert_sqrt(element->val());
+            element = builder().insert_div(one->val(), element->val());
+            dest = builder().insert_vector_insert(dest->val(), i, element->val());
+        }
         write_operand(0, dest->val());
         break;
     }
     case XED_ICLASS_RSQRTSS:
     {
         value_node* res = builder().insert_vector_extract(src2->val(), 0);
-        value_node* one = builder().insert_constant_f32(1);
+        value_node* one = builder().insert_constant_f32(1.0f);
         res = builder().insert_div(one->val(), builder().insert_sqrt(res->val())->val());
 
         write_operand(
@@ -1293,33 +1352,25 @@ void fpvec_translator::do_translate() {
             builder().insert_vector_insert(dest->val(), 0, res->val())->val());
         break;
     }
-    //controlflow issue
     case XED_ICLASS_PSIGNB:
     case XED_ICLASS_PSIGND:
     case XED_ICLASS_PSIGNW:
     {
         size_t vector_len = src1->val().type().nr_elements();
         size_t element_width = src1->val().type().element_width();
-        value_type one_type = value_type(value_type_class::signed_integer, element_width, 1);
+        value_type one_type = value_type(value_type_class::signed_integer, element_width);
         value_node* minus_one = builder().insert_constant_i(one_type,-1);
         value_node* zero = builder().insert_constant_i(one_type, 0);
         for(int i = 0; i < vector_len; i++){
             value_node* element1 = builder().insert_vector_extract(src1->val(), i);
             value_node* element2 = builder().insert_vector_extract(src2->val(), i);
 
+            value_node* negativ = builder().insert_mul(element1->val(), minus_one->val());
+
             value_node* zero_con = builder().insert_cmpeq(element2->val(), zero->val());
-            cond_br_node* zero_br = (cond_br_node*)builder().insert_cond_br(zero_con->val(), nullptr);
-            value_node* gt_zero_con = builder().insert_cmpgt(element2->val(), zero->val());
-            cond_br_node* gt_zero_br = (cond_br_node*)builder().insert_cond_br(gt_zero_con->val(), nullptr);
-                element1 = builder().insert_mul(element1->val(), minus_one->val());
-                br_node* end_br = (br_node*)builder().insert_br(nullptr);
-            label_node* zero_label = builder().insert_label("eq_zero");
-            zero_br->add_br_target(zero_label);
-                element1 = zero;
-            label_node* end_1_label = builder().insert_label("end1");
-            gt_zero_br->add_br_target(end_1_label);
-            label_node* end_2_label = builder().insert_label("end2");
-            end_br->add_br_target(end_2_label);
+            element1 = builder().insert_csel(zero_con->val(), zero->val(), element1->val());
+            value_node* negativ_con = builder().insert_cmpgt( zero->val(), element2->val());
+            element1 = builder().insert_csel(negativ_con->val(), negativ->val(), element1->val());
 
             dest = builder().insert_vector_insert(dest->val(), i, element1->val());
         }
@@ -1331,28 +1382,26 @@ void fpvec_translator::do_translate() {
     {
         size_t vector_len = src1->val().type().nr_elements();
         size_t element_width = src1->val().type().element_width();
-        value_type one_type = value_type(value_type_class::floating_point, element_width, 1);
-        value_node* zero = builder().insert_constant_f(one_type, 0);
-        value_node* tmp1 = builder().insert_constant_u128(0);
-        value_node* tmp2 = builder().insert_constant_f(one_type, 0);
-        tmp1 = builder().insert_bitcast(value_type::vector(one_type, vector_len), tmp1->val());
+        value_type one_type = src1->val().type().element_type();
+        //value_node* zero = builder().insert_constant_f(one_type, 0);
+        value_node* res = builder().insert_constant_u64(0);
+        res = builder().insert_zx(value_type::u128(), res->val());
+        res = builder().insert_bitcast(value_type::vector(one_type, vector_len), res->val());
+        value_node* sum = builder().insert_constant_f(one_type, 0);
         for(int i = 0; i < vector_len; i++){
-            value_node* element1 = builder().insert_vector_extract(src1->val(), i);
-            value_node* element2 = builder().insert_vector_extract(src2->val(), i);
+            value_node* element1 = builder().insert_vector_extract(dest->val(), i);
+            value_node* element2 = builder().insert_vector_extract(src1->val(), i);
 
             if((imm & (0b10000<<i)) > 1){
-                tmp1 = builder().insert_vector_insert(tmp1->val(), i, builder().insert_mul(element1->val(), element2->val())->val());
+                sum = builder().insert_add(sum->val(), builder().insert_mul(element1->val(), element2->val())->val());
             }
         }
         for(int i = 0; i < vector_len; i++){
-            tmp2 = builder().insert_add(tmp2->val(), builder().insert_vector_extract(tmp1->val(), i)->val());
-        }
-        for(int i = 0; i < vector_len; i++){
-            if((imm & (1<<i))>1){
-                dest = builder().insert_vector_insert(dest->val(), i, tmp2->val());
+            if((imm & (1<<i))>0){
+                res = builder().insert_vector_insert(res->val(), i, sum->val());
             }
         }
-        write_operand(0, dest->val());
+        write_operand(0, res->val());
         break;
     }
     case XED_ICLASS_PANDN:
@@ -1444,34 +1493,33 @@ void fpvec_translator::do_translate() {
     case XED_ICLASS_PSLLW:
     {
         size_t vector_len = src1->val().type().nr_elements();
-        size_t element_width = src1->val().type().element_width();
         for(int i = 0; i < vector_len; i++){
             value_node* element1 = builder().insert_vector_extract(src1->val(), i);
             value_node* res = builder().insert_lsl(element1->val(), src2->val());
 
             dest = builder().insert_vector_insert(dest->val(), i, res->val());
         }
+        write_operand(0, dest->val());
         break;
     }
     case XED_ICLASS_PSRAD:
     case XED_ICLASS_PSRAW:
     {
         size_t vector_len = src1->val().type().nr_elements();
-        size_t element_width = src1->val().type().element_width();
         for(int i = 0; i < vector_len; i++){
             value_node* element1 = builder().insert_vector_extract(src1->val(), i);
             value_node* res = builder().insert_asr(element1->val(), src2->val());
 
             dest = builder().insert_vector_insert(dest->val(), i, res->val());
         }
+        write_operand(0, dest->val());
         break;
     }
     case XED_ICLASS_RCPSS:
     {
         value_node* one = builder().insert_constant_f32(1.0f);
-        value_node* element1 = builder().insert_vector_extract(src2->val(), 0);
-        element1 = builder().insert_div(one->val(), element1->val());
-        dest = builder().insert_vector_insert(dest->val(), 0, element1->val());
+        src2 = builder().insert_div(one->val(), src2->val());
+        dest = builder().insert_vector_insert(dest->val(), 0, src2->val());
         write_operand(0, dest->val());
         break;
     }
@@ -1483,6 +1531,32 @@ void fpvec_translator::do_translate() {
             element1 = builder().insert_div(one->val(), element1->val());
             dest = builder().insert_vector_insert(dest->val(), i, element1->val());
         }
+        write_operand(0, dest->val());
+        break;
+    }
+    case XED_ICLASS_EXTRACTPS:
+    {
+        value_node* res = builder().insert_vector_extract(src1->val(), imm & 0b11);
+        write_operand(0, res->val());
+        break;
+    }
+    case XED_ICLASS_INSERTPS:{
+        value_node* tmp1;
+        if(src1->val().type().width() != 32){
+            tmp1 = builder().insert_vector_extract(src1->val(), ((imm & 0b11000000)>>6) );
+        } else {
+            tmp1 = src1;
+        }
+        dest = builder().insert_vector_insert(dest->val(), ((imm & 0b110000)>>4), tmp1->val());
+        value_node* zero = builder().insert_constant_f32(0.0f);
+        if((imm & 0b1) > 0)
+            dest = builder().insert_vector_insert(dest->val(), 0, zero->val());
+        if((imm & 0b10) > 0)
+            dest = builder().insert_vector_insert(dest->val(), 1, zero->val());
+        if((imm & 0b100) > 0)
+            dest = builder().insert_vector_insert(dest->val(), 2, zero->val());
+        if((imm & 0b1000) > 0)
+            dest = builder().insert_vector_insert(dest->val(), 3, zero->val());
         write_operand(0, dest->val());
         break;
     }
@@ -1505,6 +1579,7 @@ void fpvec_translator::do_translate() {
         break;
     }
     case XED_ICLASS_UNPCKLPD: {
+        dest = builder().insert_vector_insert(dest->val(), 0, builder().insert_vector_extract(src1->val(), 0)->val());
         dest = builder().insert_vector_insert(dest->val(), 1, builder().insert_vector_extract(src2->val(), 0)->val());
         write_operand(0, dest->val());
         break;
@@ -1516,6 +1591,83 @@ void fpvec_translator::do_translate() {
         dest = builder().insert_vector_insert(dest->val(), 2, tmp2->val());
         tmp1 = builder().insert_vector_extract(src2->val(), 1);
         dest = builder().insert_vector_insert(dest->val(), 3, tmp1->val());
+        write_operand(0, dest->val());
+        break;
+    }
+
+    case XED_ICLASS_BLENDPD:
+    case XED_ICLASS_BLENDPS:
+    case XED_ICLASS_PBLENDW:
+    {
+        size_t vector_len = dest->val().type().nr_elements();
+        value_node* one = builder().insert_constant_u1(1);
+        for(int i=0; i<vector_len ; i++){
+            value_node* element1 = builder().insert_vector_extract(dest->val(), i);
+            value_node* element2 = builder().insert_vector_extract(src1->val(), i);
+            value_node* cond = builder().insert_cmpeq(one->val(), builder().insert_constant_u1((imm>>i) & 1)->val());
+            value_node* res = builder().insert_csel(cond->val(), element2->val(), element1->val());
+            dest = builder().insert_vector_insert(dest->val(), i, res->val());
+        }
+        write_operand(0, dest->val());
+        break;
+    }
+    case XED_ICLASS_PBLENDVB:
+    {
+        value_node* src3 = read_reg(value_type::u512() , reg_offsets::ZMM0);
+        src3 = builder().insert_bitcast(value_type::vector(value_type::s8(), 64) , src3->val());
+        size_t vector_len = dest->val().type().nr_elements();
+        value_node* zero = builder().insert_constant_s8(0);
+        for(int i=0; i<vector_len ; i++){
+            value_node* element1 = builder().insert_vector_extract(src1->val(), i);
+            value_node* element2 = builder().insert_vector_extract(src2->val(), i);
+            value_node* element3 = builder().insert_vector_extract(src3->val(), i);
+            //value_node* element3 = builder().insert_bit_extract(src3->val(), i*8, 8);
+            //element3 = builder().insert_bitcast(value_type::s8(), element3->val());
+            value_node* cond = builder().insert_cmpgt(zero->val(), element3->val());
+            value_node* res = builder().insert_csel(cond->val(), element2->val(), element1->val());
+            dest = builder().insert_vector_insert(dest->val(), i, element3->val());
+        }
+        write_operand(0, dest->val());
+        break;
+    }
+    case XED_ICLASS_BLENDVPD:
+    case XED_ICLASS_BLENDVPS:
+    {
+        value_node* src3 = read_reg(dest->val().type() , reg_offsets::ZMM0);
+        size_t vector_len = dest->val().type().nr_elements();
+        //size_t e_width = dest->val().type().element_width();
+        value_type ele_type = dest->val().type().element_type();
+        value_node* zero = builder().insert_constant_f(ele_type, 0.0);
+        for(int i=0; i<vector_len ; i++){
+            value_node* element1 = builder().insert_vector_extract(src1->val(), i);
+            value_node* element2 = builder().insert_vector_extract(src2->val(), i);
+            value_node* element3 = builder().insert_vector_extract(src3->val(), i);
+            value_node* cond = builder().insert_cmpgt(zero->val(), element3->val());
+            value_node* res = builder().insert_csel(cond->val(), element2->val(), element1->val());
+            dest = builder().insert_vector_insert(dest->val(), i, res->val());
+        }
+        write_operand(0, dest->val());
+        break;
+    }
+    case XED_ICLASS_PACKUSWB:
+    case XED_ICLASS_PACKUSDW:
+    {
+        size_t vector_len = src1->val().type().nr_elements();
+        size_t element_width = src1->val().type().element_width();
+        value_type target = value_type(value_type_class::unsigned_integer, element_width/2, vector_len*2);
+        dest = builder().insert_bitcast(target, dest->val());
+        for(int i=0;i<vector_len*2;i++){
+            value_node* element;
+            if(i<vector_len){
+                element = builder().insert_vector_extract(src1->val(), i);
+            } else {
+                element = builder().insert_vector_extract(src2->val(), i-vector_len);
+            }
+            value_node* res1 = saturate_to_unsigned(element);
+            value_type target_element = value_type(value_type_class::unsigned_integer, element_width/2);
+            value_node* res2 = saturate(target_element, res1);
+            dest = builder().insert_vector_insert(dest->val(), i, res2->val());
+        }
         write_operand(0, dest->val());
         break;
     }
