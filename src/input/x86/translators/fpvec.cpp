@@ -137,6 +137,7 @@ void fpvec_translator::do_translate() {
     case XED_ICLASS_MOVLHPS:
 
     case XED_ICLASS_PSADBW:
+    case XED_ICLASS_PSHUFB:
     {
         dest = read_operand(0);
         src1 = dest;
@@ -284,6 +285,7 @@ void fpvec_translator::do_translate() {
     case XED_ICLASS_PMINSB:
     case XED_ICLASS_PSIGNB:
     case XED_ICLASS_PBLENDVB:
+    case XED_ICLASS_PSHUFB:
     {
         if (dest->val().type().width() == 128){
         dest = builder().insert_bitcast(
@@ -1826,7 +1828,25 @@ void fpvec_translator::do_translate() {
         write_operand(0, res->val());
         break;
     }
+    case XED_ICLASS_PSHUFB:{
+        size_t vector_len=dest->val().type().nr_elements();
+        value_node* bitmask;
+        if(vector_len == 8){
+            bitmask = builder().insert_constant_s8(0b10000111);
+        } else {
+            bitmask = builder().insert_constant_s8(0b10001111);
+        }
+        for(int i = 0; i < vector_len; i++){
+            value_node* element = builder().insert_vector_extract(src2->val(), i);
+            element = builder().insert_and(element->val(), bitmask->val());
 
+            value_node* res = extract_byte(src1->val(), element->val());
+
+            dest = builder().insert_vector_insert(dest->val(), i, res->val());
+        }
+        write_operand(0, dest->val());
+        break;
+    }
     case XED_ICLASS_CVTSD2SI:
     case XED_ICLASS_CVTSD2SS: {
         auto res = builder().insert_convert(value_type::f32(), src1->val(),

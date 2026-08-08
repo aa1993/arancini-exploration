@@ -1246,7 +1246,8 @@ value_node *translator::extract_byte(port& value, port& index){
     value_node* cond_lt_zero = builder_.insert_cmpgt(zero->val(), index);
     value_node* dist = builder_.insert_constant_s8(8);
     dist = builder_.insert_mul(dist->val(), index);
-    value_node* res = builder_.insert_lsr(value, index);
+    value_node* v = builder_.insert_bitcast(value_type(value_type_class::signed_integer, value.type().width()), value);
+    value_node* res = builder_.insert_lsr(v->val(), dist->val());
     res = builder_.insert_trunc(value_type::s8(), res->val());
     res = builder_.insert_csel(cond_gt_max->val(), zero->val(), res->val());
     res = builder_.insert_csel(cond_lt_zero->val(), zero->val(), res->val());

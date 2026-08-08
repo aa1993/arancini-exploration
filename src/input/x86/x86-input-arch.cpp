@@ -405,6 +405,7 @@ static std::unique_ptr<translator> get_translator(ir_builder &builder,
     case XED_ICLASS_MOVLHPS:
 
     case XED_ICLASS_PSADBW:
+    case XED_ICLASS_PSHUFB:
         return std::make_unique<fpvec_translator>(builder);
 
     case XED_ICLASS_PSHUFD:
