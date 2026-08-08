@@ -404,6 +404,19 @@ static std::unique_ptr<translator> get_translator(ir_builder &builder,
 
     case XED_ICLASS_MOVLHPS:
 
+    case XED_ICLASS_PMOVSXBW:
+    case XED_ICLASS_PMOVSXBD:
+    case XED_ICLASS_PMOVSXWD:
+    case XED_ICLASS_PMOVSXDQ:
+    case XED_ICLASS_PMOVSXBQ:
+    case XED_ICLASS_PMOVSXWQ:
+    case XED_ICLASS_PMOVZXBW:
+    case XED_ICLASS_PMOVZXBD:
+    case XED_ICLASS_PMOVZXWD:
+    case XED_ICLASS_PMOVZXBQ:
+    case XED_ICLASS_PMOVZXDQ:
+    case XED_ICLASS_PMOVZXWQ:
+
     case XED_ICLASS_PSADBW:
     case XED_ICLASS_PSHUFB:
         return std::make_unique<fpvec_translator>(builder);
