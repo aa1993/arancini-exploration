@@ -11,9 +11,9 @@ void fpvec_translator::do_translate() {
         throw std::runtime_error("Masked instructions not supported");
 
     // TODO: do not read dst if we overwrite everything
-    auto dest = read_operand(0);
-    auto src1 = read_operand(1);
-    auto src2 = read_operand(2);
+    value_node* dest;
+    value_node* src1;
+    value_node* src2;
     int imm;
     switch (xed_decoded_inst_get_iclass(xed_inst())) {
     case XED_ICLASS_SUBPD:
@@ -121,6 +121,8 @@ void fpvec_translator::do_translate() {
     case XED_ICLASS_RCPPS:
     case XED_ICLASS_RCPSS:
 
+    case XED_ICLASS_PTEST:
+
     case XED_ICLASS_UNPCKHPS:
     case XED_ICLASS_UNPCKLPD:
     case XED_ICLASS_UNPCKLPS:
@@ -134,14 +136,22 @@ void fpvec_translator::do_translate() {
 
     case XED_ICLASS_MOVLHPS:
     {
-        // we don't have 3 operands
-        src2 = src1;
+        dest = read_operand(0);
         src1 = dest;
+        src2 = read_operand(1);
+        // we don't have 3 operands
+        //src2 = src1;
+        //src1 = dest;
     } break;
     //case XED_ICLASS_PINSRB:
     //case XED_ICLASS_PINSRD:
     //case XED_ICLASS_PINSRQ:
     //case XED_ICLASS_PINSRW:
+
+    //case XED_ICLASS_PEXTRB:
+    //case XED_ICLASS_PEXTRD:
+    //case XED_ICLASS_PEXTRQ:
+    //case XED_ICLASS_PEXTRW_SSE4:
 
     //case XED_ICLASS_DPPD:
     //case XED_ICLASS_DPPS:
@@ -154,6 +164,12 @@ void fpvec_translator::do_translate() {
     //case XED_ICLASS_BLENDPD:
     //case XED_ICLASS_BLENDPS:
     //case XED_ICLASS_PBLENDW:
+    default:{
+        dest = read_operand(0);
+        src1 = read_operand(1);
+        src2 = read_operand(2);
+        break;
+    }
 
     }
 
@@ -525,6 +541,38 @@ void fpvec_translator::do_translate() {
         imm = ((constant_node*)src2)->const_val_i();
         break;
     }
+    // m8/r32/r64, xmm1.s8[16], imm8
+    case XED_ICLASS_PEXTRB:
+    {
+        dest = builder().insert_bitcast(value_type(value_type_class::signed_integer, dest->val().type().width()), dest->val());
+        src1 = builder().insert_bitcast(value_type::vector(value_type::s8(), 16), src1->val());
+        imm = ((constant_node*)src2)->const_val_i() & 0b1111;
+        break;
+    }
+    // (m/r)32.s32, xmm1.s32[4], imm8
+    case XED_ICLASS_PEXTRD:
+    {
+        dest = builder().insert_bitcast(value_type::s32(), dest->val());
+        src1 = builder().insert_bitcast(value_type::vector(value_type::s32(), 4), src1->val());
+        imm = ((constant_node*)src2)->const_val_i() & 0b11;
+        break;
+    }
+    // (m/r)64.s64, xmm1.s64[2], imm8
+    case XED_ICLASS_PEXTRQ:
+    {
+        dest = builder().insert_bitcast(value_type::s64(), dest->val());
+        src1 = builder().insert_bitcast(value_type::vector(value_type::s64(), 2), src1->val());
+        imm = ((constant_node*)src2)->const_val_i() & 0b1;
+        break;
+    }
+    // m16/r32/r64.s16, xmm1.s16[8], imm8
+    case XED_ICLASS_PEXTRW_SSE4:
+    {
+        dest = builder().insert_bitcast(value_type(value_type_class::signed_integer, dest->val().type().width()), dest->val());
+        src1 = builder().insert_bitcast(value_type::vector(value_type::s16(), 8), src1->val());
+        imm = ((constant_node*)src2)->const_val_i() & 0b111;
+        break;
+    }
     // xmm1.u8[16], xmm2.u8[16], imm8
     case XED_ICLASS_MPSADBW:
     {
@@ -627,7 +675,13 @@ void fpvec_translator::do_translate() {
         }
         break;
     }
-
+    case XED_ICLASS_PTEST:
+    {
+        dest = builder().insert_bitcast(value_type::u128(), dest->val());
+        src1 = builder().insert_bitcast(value_type::u128(), src1->val());
+        src2 = builder().insert_bitcast(value_type::u128(), src2->val());
+        break;
+    }
     case XED_ICLASS_CVTSD2SS:
     case XED_ICLASS_CVTSD2SI:
     case XED_ICLASS_CVTTSD2SI: {
@@ -1534,9 +1588,36 @@ void fpvec_translator::do_translate() {
         write_operand(0, dest->val());
         break;
     }
+    case XED_ICLASS_PTEST:
+    {
+        value_node* test_and = builder().insert_and(src1->val(), src2->val());
+        value_node* test_not = builder().insert_not(src1->val());
+        value_node* test_and_not = builder().insert_and(test_not->val(), src2->val());
+        value_node* zero = builder().insert_constant_s64(0);
+        zero = builder().insert_zx(value_type::u128(), zero->val());
+        value_node* cmp_and = builder().insert_cmpeq(test_and->val(), zero->val());
+        value_node* cmp_and_not = builder().insert_cmpeq(test_and_not->val(), zero->val());
+        value_node* pass = builder().insert_constant_u1(1);
+        value_node* fail = builder().insert_constant_u1(0);
+        value_node* zf = builder().insert_csel(cmp_and->val(), pass->val(), fail->val());
+        value_node* cf = builder().insert_csel(cmp_and_not->val(), pass->val(), fail->val());
+        write_reg(reg_offsets::ZF, zf->val());
+        write_reg(reg_offsets::CF, cf->val());
+        break;
+    }
     case XED_ICLASS_EXTRACTPS:
     {
         value_node* res = builder().insert_vector_extract(src1->val(), imm & 0b11);
+        write_operand(0, res->val());
+        break;
+    }
+    case XED_ICLASS_PEXTRB:
+    case XED_ICLASS_PEXTRD:
+    case XED_ICLASS_PEXTRQ:
+    case XED_ICLASS_PEXTRW_SSE4:
+    {
+        value_node* res = builder().insert_vector_extract(src1->val(), imm);
+        res = builder().insert_zx(dest->val().type(), res->val());
         write_operand(0, res->val());
         break;
     }
