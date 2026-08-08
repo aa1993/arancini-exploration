@@ -1238,3 +1238,17 @@ value_node *translator::saturate_to_unsigned(value_node *v){
     value_node* res = builder_.insert_bitcast(v->val().type().get_unsigned_type(), v->val());
     return builder_.insert_csel(cond->val(), zero->val(), res->val());
 }
+
+value_node *translator::extract_byte(port& value, port& index){
+    size_t max_index = value.type().width()/8;
+    value_node* cond_gt_max = builder_.insert_cmpgt(index, builder_.insert_constant_s8(max_index)->val());
+    value_node* zero = builder_.insert_constant_s8(0);
+    value_node* cond_lt_zero = builder_.insert_cmpgt(zero->val(), index);
+    value_node* dist = builder_.insert_constant_s8(8);
+    dist = builder_.insert_mul(dist->val(), index);
+    value_node* res = builder_.insert_lsr(value, index);
+    res = builder_.insert_trunc(value_type::s8(), res->val());
+    res = builder_.insert_csel(cond_gt_max->val(), zero->val(), res->val());
+    res = builder_.insert_csel(cond_lt_zero->val(), zero->val(), res->val());
+    return res;
+}

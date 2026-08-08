@@ -135,6 +135,8 @@ void fpvec_translator::do_translate() {
     case XED_ICLASS_PACKUSWB:
 
     case XED_ICLASS_MOVLHPS:
+
+    case XED_ICLASS_PSADBW:
     {
         dest = read_operand(0);
         src1 = dest;
@@ -366,6 +368,7 @@ void fpvec_translator::do_translate() {
     case XED_ICLASS_PAVGB:
     case XED_ICLASS_PMAXUB:
     case XED_ICLASS_PMINUB:
+    case XED_ICLASS_PSADBW:
     {
         if (dest->val().type().width() == 128){
         dest = builder().insert_bitcast(
@@ -1761,6 +1764,69 @@ void fpvec_translator::do_translate() {
         write_operand(0, dest->val());
         break;
     }
+
+    case XED_ICLASS_PSADBW:
+    {
+//        value_node* tmp = dest;
+//        size_t vector_len = dest->val().type().nr_elements();
+//        value_node* res = builder().insert_constant_u64(0);
+//        res = builder().insert_zx(
+//            value_type(value_type_class::unsigned_integer, dest->val().type().width()), res->val());
+//        res = builder().insert_bitcast(value_type::vector(value_type::u16(), vector_len/2), res->val());
+//        for(int i = 0; i<vector_len;i++){
+//            value_node* element1 = builder().insert_vector_extract(src1->val(), i);
+//            value_node* element2 = builder().insert_vector_extract(src2->val(), i);
+//
+//            value_node* diff = absolute(builder().insert_sub(element1->val(), element2->val()));
+//            tmp = builder().insert_vector_insert(tmp->val(), i, diff->val());
+//        }
+//        if(vector_len==8){ // if mm
+//            value_node* sum = builder().insert_constant_u16(0);
+//            for(int i = 0;i<8;i++){
+//                value_node* element = builder().insert_vector_extract(tmp->val(), i);
+//                element = builder().insert_zx(value_type::u16(), element->val());
+//                sum = builder().insert_add(sum->val(), element->val());
+//            }
+//            res = builder().insert_vector_insert(res->val(),0,sum->val());
+//        } else { // if xmm SSE 128-bit
+//            value_node* sum = builder().insert_constant_u16(0);
+//            for(int i = 0;i<8;i++){
+//                value_node* element = builder().insert_vector_extract(tmp->val(), i);
+//                element = builder().insert_zx(value_type::u16(), element->val());
+//                sum = builder().insert_add(sum->val(), element->val());
+//            }
+//            res = builder().insert_vector_insert(res->val(),0,sum->val());
+//            sum = builder().insert_constant_u16(0);
+//            for(int i = 8;i<16;i++){
+//                value_node* element = builder().insert_vector_extract(tmp->val(), i);
+//                element = builder().insert_zx(value_type::u16(), element->val());
+//                sum = builder().insert_add(sum->val(), element->val());
+//            }
+//            res = builder().insert_vector_insert(res->val(),8,sum->val());
+//        }
+        int times = (dest->val().type().width() == 128) ? 2 : 1;
+        value_node* res = builder().insert_constant_u64(0);
+        res = builder().insert_zx(value_type::u128(), res->val());
+        res = builder().insert_bitcast(value_type::vector(value_type::u16(), 4*times), res->val());
+        for(int i = 0; i<times ;i++){
+            value_node* sum = builder().insert_constant_u16(0);
+            for(int j = i*8; j< 8+(8*i); j++){
+                value_node* element1 = builder().insert_vector_extract(src1->val(), j);
+                element1 = builder().insert_zx(value_type::s16(), element1->val());
+                value_node* element2 = builder().insert_vector_extract(src2->val(), j);
+                element2 = builder().insert_zx(value_type::s16(), element2->val());
+
+                value_node* diff = absolute(builder().insert_sub(element1->val(), element2->val()));
+                diff = builder().insert_bitcast(value_type::u16(), diff->val());
+
+                sum = builder().insert_add(sum->val(), diff->val());
+            }
+            res= builder().insert_vector_insert(res->val(), 4*i, sum->val());
+        }
+        write_operand(0, res->val());
+        break;
+    }
+
     case XED_ICLASS_CVTSD2SI:
     case XED_ICLASS_CVTSD2SS: {
         auto res = builder().insert_convert(value_type::f32(), src1->val(),

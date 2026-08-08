@@ -167,12 +167,22 @@ class translator {
 
     value_node *bitmask_gt( value_node *v1, value_node *v2);
     value_node *bitmask_lt( value_node *v1, value_node *v2);
+    /// @brief saturates the v input according to the type target_type
+    /// @parameter target_type the type the value should be saturated towards
+    /// @parameter v the node thats needs to be saturated
     value_node *saturate(value_type& target_type, value_node* v);
     value_node *insert_max( value_node *v1, value_node *v2);
     value_node *insert_min( value_node *v1, value_node *v2);
+    /// @brief returns a value_node with the absolute value of the input
     value_node *absolute(value_node *v);
+    /// @brief saturates a sigend value towards a unsigned with the same
+    /// width meaning the neagtive values became 0
     value_node *saturate_to_unsigned(value_node *v);
-
+    /// @brief extract from a value the index'th byte
+    /// @parameter value the value which needs to be extracted from
+    /// @parameter index the index starting from 0 of the value which
+    /// needs to be extracted
+    value_node *extract_byte(port& value, port& index);
   private:
     ir_builder &builder_;
     xed_decoded_inst_t *xed_inst_;
