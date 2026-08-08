@@ -382,6 +382,8 @@ static std::unique_ptr<translator> get_translator(ir_builder &builder,
     case XED_ICLASS_PACKUSDW:
     case XED_ICLASS_PACKUSWB:
 
+    case XED_ICLASS_PALIGNR:
+
     case XED_ICLASS_PINSRB:
     case XED_ICLASS_PINSRD:
     case XED_ICLASS_PINSRQ:

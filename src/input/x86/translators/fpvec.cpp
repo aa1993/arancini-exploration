@@ -173,6 +173,7 @@ void fpvec_translator::do_translate() {
     //case XED_ICLASS_DPPS:
 
     //case XED_ICLASS_MPSADBW:
+    //case XED_ICLASS_PALIGNR:
 
     //case XED_ICLASS_EXTRACTPS:
     //case XED_ICLASS_INSERTPS:
@@ -710,6 +711,11 @@ void fpvec_translator::do_translate() {
         dest = builder().insert_bitcast(value_type::u128(), dest->val());
         src1 = builder().insert_bitcast(value_type::u128(), src1->val());
         src2 = builder().insert_bitcast(value_type::u128(), src2->val());
+        break;
+    }
+    case XED_ICLASS_PALIGNR:
+    {
+        imm = ((constant_node*)src2)->const_val_i();
         break;
     }
     case XED_ICLASS_CVTSD2SS:
@@ -1779,6 +1785,20 @@ void fpvec_translator::do_translate() {
             value_node* res2 = saturate(target_element, res1);
             dest = builder().insert_vector_insert(dest->val(), i, res2->val());
         }
+        write_operand(0, dest->val());
+        break;
+    }
+
+    case XED_ICLASS_PALIGNR:{
+        dest = builder().insert_zx(value_type::u256(), dest->val());
+        dest = builder().insert_bitcast(value_type::vector(value_type::u128(), 2), dest->val());
+        value_node* tmp = builder().insert_vector_extract(dest->val(),0);
+        dest = builder().insert_vector_insert(dest->val(), 1, tmp->val());
+        dest = builder().insert_vector_insert(dest->val(), 0, src1->val());
+        dest = builder().insert_bitcast(value_type::u256(), dest->val());
+        dest = builder().insert_lsr(dest->val(), builder().insert_constant_u8(imm*8)->val());
+        dest = builder().insert_bitcast(value_type::vector(value_type::u128(), 2), dest->val());
+        dest = builder().insert_vector_extract(dest->val(), 0);
         write_operand(0, dest->val());
         break;
     }
