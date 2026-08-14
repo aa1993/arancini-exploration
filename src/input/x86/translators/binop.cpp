@@ -232,23 +232,23 @@ void binop_translator::do_translate() {
         if (lhs->val().type().width() == 128) {
             nr_splits *= 2;
         }
-        auto typ = (inst_class == XED_ICLASS_PCMPGTB)   ? value_type::u8()
-                   : (inst_class == XED_ICLASS_PCMPGTW) ? value_type::u16()
-                                                        : value_type::u32();
+        auto typ = (inst_class == XED_ICLASS_PCMPGTB)   ? value_type::s8()
+                   : (inst_class == XED_ICLASS_PCMPGTW) ? value_type::s16()
+                                                        : value_type::s32();
         lhs = builder().insert_bitcast(value_type::vector(typ, nr_splits),
                                        lhs->val());
         rhs = builder().insert_bitcast(value_type::vector(typ, nr_splits),
                                        rhs->val());
 
         auto cst_0 = builder().insert_constant_i(
-            value_type(value_type_class::unsigned_integer,
+            value_type(value_type_class::signed_integer,
                        lhs->val().type().width() / nr_splits),
             0);
         auto cst_1 = (inst_class == XED_ICLASS_PCMPGTB)
-                         ? builder().insert_constant_u8(0xFF)
+                         ? builder().insert_constant_s8(-1)
                      : (inst_class == XED_ICLASS_PCMPGTW)
-                         ? builder().insert_constant_u16(0xFFFF)
-                         : builder().insert_constant_u32(0xFFFFFFFF);
+                         ? builder().insert_constant_s16(-1)
+                         : builder().insert_constant_s32(-1);
 
         for (int i = 0; i < nr_splits; i++) {
             auto gt = builder().insert_cmpgt(
@@ -545,8 +545,8 @@ void binop_translator::do_translate() {
             VecTy = value_type::vector(value_type::f32(), 4);
         } break;
         case XED_ICLASS_CMPSD_XMM: {
-            true_val = builder().insert_constant_f64((float)0xFFFFFFFFFFFFFFFF);
-            false_val = builder().insert_constant_f64((float)0x000000000000000);
+            true_val = builder().insert_constant_f64((double)0xFFFFFFFFFFFFFFFF);
+            false_val = builder().insert_constant_f64((double)0x000000000000000);
             VecTy = value_type::vector(value_type::f64(), 2);
         } break;
         default:
