@@ -21,8 +21,12 @@ void mov_translator::do_translate() {
         auto op1 = auto_cast(tt, read_operand(1));
         // TODO: temporary hack for MOVQ with immediate
         if (is_immediate_operand(1) &&
-            get_operand_width(1) < get_operand_width(0)) {
-            op1 = builder().insert_zx(value_type::u64(), op1->val());
+            op1->val().type().width() < get_operand_width(0)) {
+            if(op1->val().type().type_class() == value_type_class::unsigned_integer){
+                op1 = builder().insert_zx(value_type::u64(), op1->val());
+            } else {
+                op1 = builder().insert_sx(value_type::s64(), op1->val());
+            }
         }
         write_operand(0, op1->val());
         break;
@@ -141,7 +145,7 @@ void mov_translator::do_translate() {
         } else {                      // movsd xmm1, xmm2
             auto dst = read_operand(0);
             src = builder().insert_bit_extract(src->val(), 0, 64);
-            dst = builder().insert_bit_insert(dst->val(), src->val(), 0, 64);
+            src = builder().insert_bit_insert(dst->val(), src->val(), 0, 64);
         }
         write_operand(0, src->val());
         break;
