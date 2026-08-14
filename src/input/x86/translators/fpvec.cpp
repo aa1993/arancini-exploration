@@ -123,6 +123,8 @@ void fpvec_translator::do_translate() {
 
     case XED_ICLASS_PTEST:
 
+    case XED_ICLASS_LDDQU:
+
     case XED_ICLASS_UNPCKHPS:
     case XED_ICLASS_UNPCKLPD:
     case XED_ICLASS_UNPCKLPS:
@@ -134,7 +136,24 @@ void fpvec_translator::do_translate() {
     case XED_ICLASS_PACKUSDW:
     case XED_ICLASS_PACKUSWB:
 
+    case XED_ICLASS_PCMPEQQ:
+    case XED_ICLASS_PCMPGTQ:
+
+    case XED_ICLASS_MOVDDUP:
+    case XED_ICLASS_MOVDQ2Q:
+    case XED_ICLASS_MOVHLPS:
     case XED_ICLASS_MOVLHPS:
+    case XED_ICLASS_MOVMSKPD:
+    case XED_ICLASS_MOVMSKPS:
+    case XED_ICLASS_MOVNTDQ:
+    case XED_ICLASS_MOVNTDQA:
+    case XED_ICLASS_MOVNTI:
+    case XED_ICLASS_MOVNTPD:
+    case XED_ICLASS_MOVNTPS:
+    case XED_ICLASS_MOVQ2DQ:
+    case XED_ICLASS_MOVSHDUP:
+    case XED_ICLASS_MOVSLDUP:
+    case XED_ICLASS_MOVUPD:
 
     case XED_ICLASS_PMOVSXBW:
     case XED_ICLASS_PMOVSXBD:
@@ -181,6 +200,9 @@ void fpvec_translator::do_translate() {
     //case XED_ICLASS_BLENDPD:
     //case XED_ICLASS_BLENDPS:
     //case XED_ICLASS_PBLENDW:
+
+    //case XED_ICLASS_CMPPD:
+    //case XED_ICLASS_CMPPS:
     default:{
         dest = read_operand(0);
         src1 = read_operand(1);
@@ -195,7 +217,6 @@ void fpvec_translator::do_translate() {
     case XED_ICLASS_XORPS:
     case XED_ICLASS_HADDPS:
     case XED_ICLASS_UNPCKLPS:
-    case XED_ICLASS_MOVLHPS:
     case XED_ICLASS_SUBPS:
     case XED_ICLASS_HSUBPS:
     case XED_ICLASS_MULPS:
@@ -208,6 +229,8 @@ void fpvec_translator::do_translate() {
     case XED_ICLASS_RCPPS:
     case XED_ICLASS_UNPCKHPS:
     case XED_ICLASS_BLENDVPS:
+    case XED_ICLASS_MOVSHDUP:
+    case XED_ICLASS_MOVSLDUP:
     {
         dest = builder().insert_bitcast(
             value_type::vector(value_type::f32(), 4), dest->val());
@@ -228,8 +251,9 @@ void fpvec_translator::do_translate() {
     case XED_ICLASS_MINPD:
     case XED_ICLASS_ADDSUBPD:
     case XED_ICLASS_SQRTPD:
-    case XED_ICLASS_UNPCKLPD:
     case XED_ICLASS_BLENDVPD:
+    case XED_ICLASS_MOVDDUP:
+    case XED_ICLASS_MOVQ2DQ:
     {
         dest = builder().insert_bitcast(
             value_type::vector(value_type::f64(), 2), dest->val());
@@ -366,6 +390,7 @@ void fpvec_translator::do_translate() {
     case XED_ICLASS_PSIGND:
     case XED_ICLASS_PACKUSDW:
     case XED_ICLASS_PMOVSXDQ:
+    case XED_ICLASS_MOVHLPS:
     {
         if (dest->val().type().width() == 128){
         dest = builder().insert_bitcast(
@@ -381,6 +406,25 @@ void fpvec_translator::do_translate() {
                 value_type::vector(value_type::s32(), 2), src1->val());
             src2 = builder().insert_bitcast(
                 value_type::vector(value_type::s32(), 2), src2->val());
+        }
+        break;
+    }
+    // xmm1.s64[2]/mm1.s64, (xmm2 | m128).s64[2]/(mm2 | m64).s64
+    case XED_ICLASS_PCMPEQQ:
+    case XED_ICLASS_PCMPGTQ:
+    case XED_ICLASS_UNPCKLPD:
+    {
+        if (dest->val().type().width() == 128){
+        dest = builder().insert_bitcast(
+            value_type::vector(value_type::s64(), 2), dest->val());
+        src1 = builder().insert_bitcast(
+            value_type::vector(value_type::s64(), 2), src1->val());
+        src2 = builder().insert_bitcast(
+            value_type::vector(value_type::s64(), 2), src2->val());
+        }else{
+            dest = builder().insert_bitcast(value_type::s64(), dest->val());
+            src1 = builder().insert_bitcast(value_type::s64(), src1->val());
+            src2 = builder().insert_bitcast(value_type::s64(), src2->val());
         }
         break;
     }
@@ -462,9 +506,27 @@ void fpvec_translator::do_translate() {
         }
         break;
     }
+    // xmm1.u64[2]/mm1.u64, (xmm2 | m128).u64[2]/(mm2 | m64).u64
+    case XED_ICLASS_MOVLHPS:
+    {
+        if (dest->val().type().width() == 128){
+        dest = builder().insert_bitcast(
+            value_type::vector(value_type::u64(), 2), dest->val());
+        src1 = builder().insert_bitcast(
+            value_type::vector(value_type::u64(), 2), src1->val());
+        src2 = builder().insert_bitcast(
+            value_type::vector(value_type::u64(), 2), src2->val());
+        }else{
+            dest = builder().insert_bitcast(value_type::u64(), dest->val());
+            src1 = builder().insert_bitcast(value_type::u64(), src1->val());
+            src2 = builder().insert_bitcast(value_type::u64(), src2->val());
+        }
+        break;
+    }
     // xmm1.f32[4],(xmm2/ m128).f32[4], imm8
     case XED_ICLASS_DPPS:
     case XED_ICLASS_BLENDPS:
+    case XED_ICLASS_CMPPS:
     {
         dest = builder().insert_bitcast(
             value_type::vector(value_type::f32(), 4), dest->val());
@@ -476,6 +538,7 @@ void fpvec_translator::do_translate() {
     // xmm1.f64[2],(xmm2/ m128).f64[2], imm8
     case XED_ICLASS_DPPD:
     case XED_ICLASS_BLENDPD:
+    case XED_ICLASS_CMPPD:
     {
         dest = builder().insert_bitcast(
             value_type::vector(value_type::f64(), 2), dest->val());
@@ -663,8 +726,16 @@ void fpvec_translator::do_translate() {
         src2 = builder().insert_trunc(value_type::u8(), src2->val());
         break;
     }
-    // xmm1.u128/mm1.u64, (xmm1 | m).u128/(mm | m).u64
     case XED_ICLASS_PANDN:
+    case XED_ICLASS_MOVMSKPD:
+    case XED_ICLASS_MOVMSKPS:
+    case XED_ICLASS_MOVNTDQ:
+    case XED_ICLASS_MOVNTDQA:
+    case XED_ICLASS_MOVNTI:
+    case XED_ICLASS_MOVNTPD:
+    case XED_ICLASS_MOVNTPS:
+    case XED_ICLASS_MOVUPD:
+    case XED_ICLASS_LDDQU:
     {
         break;
     }
@@ -716,6 +787,11 @@ void fpvec_translator::do_translate() {
     case XED_ICLASS_PALIGNR:
     {
         imm = ((constant_node*)src2)->const_val_i();
+        break;
+    }
+    case XED_ICLASS_MOVDQ2Q:
+    {
+        src2 = builder().insert_bitcast(value_type::vector(value_type::u64(),2), src2->val());
         break;
     }
     case XED_ICLASS_CVTSD2SS:
@@ -1637,8 +1713,12 @@ void fpvec_translator::do_translate() {
         value_node* fail = builder().insert_constant_u1(0);
         value_node* zf = builder().insert_csel(cmp_and->val(), pass->val(), fail->val());
         value_node* cf = builder().insert_csel(cmp_and_not->val(), pass->val(), fail->val());
+
         write_reg(reg_offsets::ZF, zf->val());
         write_reg(reg_offsets::CF, cf->val());
+        write_reg(reg_offsets::OF, fail->val());
+        write_reg(reg_offsets::PF, fail->val());
+        write_reg(reg_offsets::SF, fail->val());
         break;
     }
     case XED_ICLASS_EXTRACTPS:
@@ -1696,8 +1776,8 @@ void fpvec_translator::do_translate() {
         break;
     }
     case XED_ICLASS_UNPCKLPD: {
-        dest = builder().insert_vector_insert(dest->val(), 0, builder().insert_vector_extract(src1->val(), 0)->val());
-        dest = builder().insert_vector_insert(dest->val(), 1, builder().insert_vector_extract(src2->val(), 0)->val());
+        value_node* tmp = builder().insert_vector_extract(src2->val(), 0);
+        dest = builder().insert_vector_insert(dest->val(), 1, tmp->val());
         write_operand(0, dest->val());
         break;
     }
@@ -1739,10 +1819,10 @@ void fpvec_translator::do_translate() {
             value_node* element2 = builder().insert_vector_extract(src2->val(), i);
             value_node* element3 = builder().insert_vector_extract(src3->val(), i);
             //value_node* element3 = builder().insert_bit_extract(src3->val(), i*8, 8);
-            //element3 = builder().insert_bitcast(value_type::s8(), element3->val());
+            element3 = builder().insert_bitcast(value_type::s8(), element3->val());
             value_node* cond = builder().insert_cmpgt(zero->val(), element3->val());
             value_node* res = builder().insert_csel(cond->val(), element2->val(), element1->val());
-            dest = builder().insert_vector_insert(dest->val(), i, element3->val());
+            dest = builder().insert_vector_insert(dest->val(), i, res->val());
         }
         write_operand(0, dest->val());
         break;
@@ -1751,10 +1831,13 @@ void fpvec_translator::do_translate() {
     case XED_ICLASS_BLENDVPS:
     {
         value_node* src3 = read_reg(dest->val().type() , reg_offsets::ZMM0);
+        src3 = builder().insert_bitcast(
+            value_type(value_type_class::signed_integer, src3->val().type().element_width(), src3->val().type().nr_elements()),
+            src3->val());
         size_t vector_len = dest->val().type().nr_elements();
         //size_t e_width = dest->val().type().element_width();
-        value_type ele_type = dest->val().type().element_type();
-        value_node* zero = builder().insert_constant_f(ele_type, 0.0);
+        value_type ele_type = src3->val().type().element_type();
+        value_node* zero = builder().insert_constant_i(ele_type, 0.0);
         for(int i=0; i<vector_len ; i++){
             value_node* element1 = builder().insert_vector_extract(src1->val(), i);
             value_node* element2 = builder().insert_vector_extract(src2->val(), i);
@@ -1803,12 +1886,219 @@ void fpvec_translator::do_translate() {
         break;
     }
 
-    case XED_ICLASS_MOVLHPS:{
-        value_node* tmp1 = builder().insert_vector_extract(src2->val(), 0);
-        value_node* tmp2 = builder().insert_vector_extract(src2->val(), 1);
-        dest = builder().insert_vector_insert(dest->val(), 2, tmp1->val());
-        dest = builder().insert_vector_insert(dest->val(), 3, tmp2->val());
+    case XED_ICLASS_CMPPD:
+    case XED_ICLASS_CMPPS:
+    {
+        value_node* true_val;
+        value_node* false_val;
+
+        value_node* res= builder().insert_constant_u64(0);
+        res = builder().insert_zx(value_type::u128(), res->val());
+        if(dest->val().type().element_width() == 32){
+            true_val = builder().insert_constant_s32(-1);
+            false_val = builder().insert_constant_s32(0);
+            res = builder().insert_bitcast(value_type::vector(value_type::s32(),4), res->val());
+        } else {
+            true_val = builder().insert_constant_s64(-1);
+            false_val = builder().insert_constant_s64(0);
+            res = builder().insert_bitcast(value_type::vector(value_type::s64(),2), res->val());
+        }
+        size_t vector_len = dest->val().type().nr_elements();
+        for(int i = 0; i<vector_len;i++){
+            value_node* element1 = builder().insert_vector_extract(dest->val(), i);
+            value_node* element2 = builder().insert_vector_extract(src1->val(), i);
+            value_node *cond;
+            switch (imm) {
+            case 0:
+                cond = builder().insert_binop(binary_arith_op::cmpoeq, element1->val(),
+                                              element2->val());
+                break;
+            case 1:
+                cond = builder().insert_binop(binary_arith_op::cmpolt, element1->val(),
+                                              element2->val());
+                break;
+            case 2:
+                cond = builder().insert_binop(binary_arith_op::cmpole, element1->val(),
+                                              element2->val());
+                break;
+            case 3:
+                cond = builder().insert_binop(binary_arith_op::cmpu, element1->val(),
+                                              element2->val());
+                break;
+            case 4:
+                cond = builder().insert_binop(binary_arith_op::cmpune, element1->val(),
+                                              element2->val());
+                break;
+            case 5:
+                cond = builder().insert_binop(binary_arith_op::cmpunlt, element1->val(),
+                                              element2->val());
+                break;
+            case 6:
+                cond = builder().insert_binop(binary_arith_op::cmpunle, element1->val(),
+                                              element2->val());
+                break;
+            case 7:
+                cond = builder().insert_binop(binary_arith_op::cmpo, element1->val(),
+                                              element2->val());
+                break;
+            }
+            value_node* tmp = builder().insert_csel(cond->val(), true_val->val(),
+                                             false_val->val());
+            res = builder().insert_vector_insert(res->val(), i, tmp->val());
+        }
+        write_operand(0, res->val());
+        break;
+    }
+    case XED_ICLASS_PCMPEQQ:
+    {
+        value_node* true_val = builder().insert_constant_s64(-1);
+        value_node* false_val = builder().insert_constant_s64(0);
+        size_t vector_len = dest->val().type().nr_elements();
+        for(int i = 0; i<vector_len; i++){
+            value_node* element1 = builder().insert_vector_extract(src1->val(), i);
+            value_node* element2 = builder().insert_vector_extract(src2->val(), i);
+
+            value_node* cond = builder().insert_cmpeq(element1->val(), element2->val());
+            value_node* res = builder().insert_csel(cond->val(), true_val->val(), false_val->val());
+
+            dest = builder().insert_vector_insert(dest->val(), i, res->val());
+        }
         write_operand(0, dest->val());
+        break;
+    }
+    case XED_ICLASS_PCMPGTQ:
+    {
+        value_node* true_val = builder().insert_constant_s64(-1);
+        value_node* false_val = builder().insert_constant_s64(0);
+        size_t vector_len = dest->val().type().nr_elements();
+        for(int i = 0; i<vector_len; i++){
+            value_node* element1 = builder().insert_vector_extract(src1->val(), i);
+            value_node* element2 = builder().insert_vector_extract(src2->val(), i);
+
+            value_node* cond = builder().insert_cmpgt(element1->val(), element2->val());
+            value_node* res = builder().insert_csel(cond->val(), true_val->val(), false_val->val());
+
+            dest = builder().insert_vector_insert(dest->val(), i, res->val());
+        }
+        write_operand(0, dest->val());
+        break;
+    }
+    case XED_ICLASS_MOVDDUP:
+    {
+        value_node* tmp = builder().insert_vector_extract(src2->val(), 0);
+        src2 = builder().insert_vector_insert(src2->val(), 1, tmp->val());
+        write_operand(0, src2->val());
+        break;
+    }
+    case XED_ICLASS_MOVDQ2Q:
+    {
+        value_node* res = builder().insert_vector_extract(src2->val(), 0);
+        write_operand(0, res->val());
+        break;
+    }
+    case XED_ICLASS_MOVHLPS:{
+        value_node* tmp1 = builder().insert_vector_extract(src2->val(), 2);
+        value_node* tmp2 = builder().insert_vector_extract(src2->val(), 3);
+        dest = builder().insert_vector_insert(dest->val(), 0, tmp1->val());
+        dest = builder().insert_vector_insert(dest->val(), 1, tmp2->val());
+        write_operand(0, dest->val());
+        break;
+    }
+//    case XED_ICLASS_MOVHLPS:
+//    {
+//        value_node* tmp = builder().insert_vector_extract(src2->val(), 1);
+//        dest = builder().insert_vector_insert(dest->val(), 0, tmp->val());
+//        write_operand(0, dest->val());
+//        break;
+//    }
+//    case XED_ICLASS_MOVLHPS:{
+//        value_node* tmp1 = builder().insert_vector_extract(src2->val(), 0);
+//        value_node* tmp2 = builder().insert_vector_extract(src2->val(), 1);
+//        dest = builder().insert_vector_insert(dest->val(), 2, tmp1->val());
+//        dest = builder().insert_vector_insert(dest->val(), 3, tmp2->val());
+//        write_operand(0, dest->val());
+//        break;
+//    }
+    case XED_ICLASS_MOVLHPS:
+    {
+        value_node* tmp = builder().insert_vector_extract(src2->val(), 0);
+        dest = builder().insert_vector_insert(dest->val(), 1, tmp->val());
+        write_operand(0, dest->val());
+        break;
+    }
+    case XED_ICLASS_MOVMSKPD:
+    {
+        value_node* res;
+        if(dest->val().type().width()==32)
+            res = builder().insert_constant_u32(0);
+        else
+            res = builder().insert_constant_u64(0);
+        value_node* tmp = builder().insert_bit_extract(src2->val(), 63, 1);
+        res = builder().insert_bit_insert(res->val(), tmp->val(), 0, 1);
+        tmp = builder().insert_bit_extract(src2->val(), 127, 1);
+        res = builder().insert_bit_insert(res->val(), tmp->val(), 1, 1);
+
+        write_operand(0, res->val());
+        break;
+    }
+    case XED_ICLASS_MOVMSKPS:
+    {
+        value_node* res;
+        if(dest->val().type().width()==32)
+            res = builder().insert_constant_u32(0);
+        else
+            res = builder().insert_constant_u64(0);
+        value_node* tmp = builder().insert_bit_extract(src2->val(), 31, 1);
+        res = builder().insert_bit_insert(res->val(), tmp->val(), 0, 1);
+        tmp = builder().insert_bit_extract(src2->val(), 63, 1);
+        res = builder().insert_bit_insert(res->val(), tmp->val(), 1, 1);
+        tmp = builder().insert_bit_extract(src2->val(), 95, 1);
+        res = builder().insert_bit_insert(res->val(), tmp->val(), 2, 1);
+        tmp = builder().insert_bit_extract(src2->val(), 127, 1);
+        res = builder().insert_bit_insert(res->val(), tmp->val(), 3, 1);
+
+        write_operand(0, res->val());
+        break;
+    }
+    case XED_ICLASS_MOVNTDQ:
+    case XED_ICLASS_MOVNTDQA:
+    case XED_ICLASS_MOVNTPD:
+    case XED_ICLASS_MOVNTPS:
+    case XED_ICLASS_MOVUPD:
+    case XED_ICLASS_LDDQU:
+    {
+        write_operand(0, src2->val());
+        break;
+    }
+    case XED_ICLASS_MOVQ2DQ:
+    {
+        value_node* tmp = builder().insert_constant_u64(0);
+        src2 = builder().insert_vector_insert(src2->val(), 1, tmp->val());
+        write_operand(0, src2->val());
+        break;
+    }
+    case XED_ICLASS_MOVSHDUP:
+    {
+        value_node* tmp = builder().insert_vector_extract(src2->val(), 1);
+        src2 = builder().insert_vector_insert(src2->val(), 0, tmp->val());
+        tmp = builder().insert_vector_extract(src2->val(), 3);
+        src2 = builder().insert_vector_insert(src2->val(), 2, tmp->val());
+        write_operand(0, src2->val());
+        break;
+    }
+    case XED_ICLASS_MOVSLDUP:
+    {
+        value_node* tmp = builder().insert_vector_extract(src2->val(), 0);
+        src2 = builder().insert_vector_insert(src2->val(), 1, tmp->val());
+        tmp = builder().insert_vector_extract(src2->val(), 2);
+        src2 = builder().insert_vector_insert(src2->val(), 3, tmp->val());
+        write_operand(0, src2->val());
+        break;
+    }
+    case XED_ICLASS_MOVNTI:
+    {
+        src2 = builder().insert_sx(dest->val().type(), src2->val());
+        write_operand(0, src2->val());
         break;
     }
     case XED_ICLASS_PMOVSXBW:

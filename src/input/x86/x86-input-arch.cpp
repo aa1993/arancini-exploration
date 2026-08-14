@@ -175,6 +175,9 @@ static std::unique_ptr<translator> get_translator(ir_builder &builder,
         return std::make_unique<binop_translator>(builder);
 
     case XED_ICLASS_PUSH:
+    case XED_ICLASS_PUSHF:
+    case XED_ICLASS_PUSHFD:
+    case XED_ICLASS_PUSHFQ:
     case XED_ICLASS_POP:
     case XED_ICLASS_LEAVE:
         return std::make_unique<stack_translator>(builder);
@@ -367,6 +370,7 @@ static std::unique_ptr<translator> get_translator(ir_builder &builder,
 
     case XED_ICLASS_EXTRACTPS:
     case XED_ICLASS_INSERTPS:
+    case XED_ICLASS_LDDQU:
 
     case XED_ICLASS_UNPCKLPD:
     case XED_ICLASS_UNPCKLPS:
@@ -383,6 +387,11 @@ static std::unique_ptr<translator> get_translator(ir_builder &builder,
     case XED_ICLASS_PACKUSWB:
 
     case XED_ICLASS_PALIGNR:
+
+    case XED_ICLASS_CMPPD:
+    case XED_ICLASS_CMPPS:
+    case XED_ICLASS_PCMPEQQ:
+    case XED_ICLASS_PCMPGTQ:
 
     case XED_ICLASS_PINSRB:
     case XED_ICLASS_PINSRD:
@@ -404,7 +413,21 @@ static std::unique_ptr<translator> get_translator(ir_builder &builder,
 
     case XED_ICLASS_MPSADBW:
 
+    case XED_ICLASS_MOVDDUP:
+    case XED_ICLASS_MOVDQ2Q:
+    case XED_ICLASS_MOVHLPS:
     case XED_ICLASS_MOVLHPS:
+    case XED_ICLASS_MOVMSKPD:
+    case XED_ICLASS_MOVMSKPS:
+    case XED_ICLASS_MOVNTDQ:
+    case XED_ICLASS_MOVNTDQA:
+    case XED_ICLASS_MOVNTI:
+    case XED_ICLASS_MOVNTPD:
+    case XED_ICLASS_MOVNTPS:
+    case XED_ICLASS_MOVQ2DQ:
+    case XED_ICLASS_MOVSHDUP:
+    case XED_ICLASS_MOVSLDUP:
+    case XED_ICLASS_MOVUPD:
 
     case XED_ICLASS_PMOVSXBW:
     case XED_ICLASS_PMOVSXBD:
