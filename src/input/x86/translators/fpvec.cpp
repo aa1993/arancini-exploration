@@ -1509,9 +1509,8 @@ void fpvec_translator::do_translate() {
     }
     case XED_ICLASS_RSQRTSS:
     {
-        value_node* res = builder().insert_vector_extract(src2->val(), 0);
         value_node* one = builder().insert_constant_f32(1.0f);
-        res = builder().insert_div(one->val(), builder().insert_sqrt(res->val())->val());
+        value_node* res = builder().insert_div(one->val(), builder().insert_sqrt(src2->val())->val());
 
         write_operand(
             0,
