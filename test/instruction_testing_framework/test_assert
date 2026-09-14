@@ -1,0 +1,6 @@
+#!/bin/bash
+
+for i in $(find . -name '*assert_static_musl')
+do
+    $i
+done

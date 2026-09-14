@@ -1,0 +1,9 @@
+#!/bin/bash
+BASE_DIR="."
+
+find "$BASE_DIR" -type f -name "Makefile" -printf '%h\n' |
+while IFS= read -r dir; do
+    echo "Processing: $dir"
+    make -C "$dir" clean
+    make -C "$dir"
+done

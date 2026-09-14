@@ -1,0 +1,156 @@
+#include <immintrin.h>
+#include <stdio.h>
+#include <string.h>
+#include <assert.h>
+
+
+void insert_f32( __m128* dest, float input[]){
+    *dest = _mm_set_ps(input[3], input[2], input[1], input[0]);
+}
+void insert_f64( __m128d* dest, double input[]){
+    *dest = _mm_set_pd(input[1], input[0]);
+}
+void insert_i8( __m128i* dest, char input[]){
+    *dest = _mm_set_epi8(input[15], input[14], input[13], input[12], input[11], input[10], input[9], input[8], input[7], input[6], input[5], input[4], input[3], input[2], input[1], input[0]);
+}
+void insert_i16( __m128i* dest, short input[]){
+    *dest = _mm_set_epi16(input[7], input[6], input[5], input[4], input[3], input[2], input[1], input[0]);
+}
+void insert_i32( __m128i* dest, int input[]){
+    *dest = _mm_set_epi32(input[3], input[2], input[1], input[0]);
+}
+void insert_i64( __m128i* dest, long input[]){
+    *dest = _mm_set_epi64x(input[1], input[0]);
+}
+void extract_f32( float dest[], __m128 input){
+    _mm_storeu_ps(dest, input);
+}
+void extract_f64( double dest[], __m128d input){
+    _mm_storeu_pd(dest, input);
+}
+void extract_i8( char dest[], __m128i input){
+    _mm_storeu_si128((__m128i*)dest, input);
+}
+void extract_i16( short* dest, __m128i input){
+    _mm_storeu_si128((__m128i*)dest, input);
+}
+void extract_i32( int dest[], __m128i input){
+    _mm_storeu_si128((__m128i*)dest, input);
+}
+void extract_i64( long dest[], __m128i input){
+    _mm_storeu_si128((__m128i*)dest, input);
+}
+void to_string_f32(char* dest,  float src[]){
+    char res[255];
+    sprintf(res, "(%f, %f, %f, %f)",
+          src[0], src[1], src[2], src[3]);
+    strcpy(dest, res);
+}
+void to_string_f64(char* dest,  double src[]){
+    char res[255];
+    sprintf(res, "(%.17g, %.17g)",
+          src[0], src[1]);
+    strcpy(dest, res);
+}
+void to_string_i8(char* dest,  char src[]){
+    char res[255];
+    sprintf(res, "(%d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d)",
+          src[0], src[1], src[2], src[3], src[4], src[5], src[6], src[7], src[8], src[9], src[10], src[11], src[12], src[13], src[14], src[15]);
+    strcpy(dest, res);
+}
+void to_string_i16(char* dest, short src[]){
+    char res[255];
+    sprintf(res, "(%d, %d, %d, %d, %d, %d, %d, %d)",
+          src[0], src[1], src[2], src[3], src[4], src[5], src[6], src[7]);
+    strcpy(dest, res);
+}
+void to_string_i32(char* dest,  int src[]){
+    char res[255];
+    sprintf(res, "(%d, %d, %d, %d)",
+          src[0], src[1], src[2], src[3]);
+    strcpy(dest, res);
+}
+void to_string_i64(char* dest,  long src[]){
+    char res[255];
+    sprintf(res, "(%ld, %ld)",
+          src[0], src[1]);
+    strcpy(dest, res);
+}
+void to_string_u8(char* dest, unsigned char src[]){
+    char res[255];
+    sprintf(res, "(%d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d)",
+          src[0], src[1], src[2], src[3], src[4], src[5], src[6], src[7], src[8], src[9], src[10], src[11], src[12], src[13], src[14], src[15]);
+    strcpy(dest, res);
+}
+void to_string_u16(char* dest, unsigned short src[]){
+    char res[255];
+    sprintf(res, "(%d, %d, %d, %d, %d, %d, %d, %d)",
+          src[0], src[1], src[2], src[3], src[4], src[5], src[6], src[7]);
+    strcpy(dest, res);
+}
+void to_string_u32(char* dest,  unsigned int src[]){
+    char res[255];
+    sprintf(res, "(%u, %u, %u, %u)",
+          src[0], src[1], src[2], src[3]);
+    strcpy(dest, res);
+}
+void to_string_u64(char* dest,  unsigned long src[]){
+    char res[255];
+    sprintf(res, "(%lu, %lu)",
+          src[0], src[1]);
+    strcpy(dest, res);
+}
+
+#define LEN 8
+#define SSE_TYPE __m128i
+#define TYPE i16
+#define STR_TYPE i16
+#define P_TYPE short
+#define INST_NAME psubsw
+#define INTRINSIC_FUN _mm_subs_epi16
+//#define PRINT
+
+#define STR(x) STR_IMPL(x)
+#define STR_IMPL(x) #x
+
+#define CONCAT(a, b) CONCAT_IMPL(a, b)
+#define CONCAT_IMPL(a, b) a##b
+
+#define INSERT CONCAT(insert_, TYPE)
+#define EXTRACT CONCAT(extract_, TYPE)
+#define TO_STRING CONCAT(to_string_, STR_TYPE)
+
+int main() {
+    P_TYPE in1[LEN] = {32767, -10, -32768, -7, 50, 100, 15 ,32767};
+    P_TYPE in2[LEN] = {-32768, 32767, 17, -32768, -1, 0, -500, -300};
+    P_TYPE con[LEN] = {32767, -32768, -32768, 32761, 51, 100, 515, 32767};
+    P_TYPE out[LEN];
+
+    SSE_TYPE v1;
+    INSERT(&v1, in1);
+    SSE_TYPE v2;
+    INSERT(&v2, in2);
+
+    SSE_TYPE res = INTRINSIC_FUN(v1, v2);
+
+    EXTRACT(out, res);
+
+    char in1_s[255];
+    TO_STRING(in1_s, in1);
+    char in2_s[255];
+    TO_STRING(in2_s, in2);
+    char out_s[255];
+    TO_STRING(out_s, out);
+
+#ifdef PRINT
+    printf("%s\n "STR(INST_NAME)"\n%s\n |\n\\/\n%s\n",in1_s, in2_s, out_s);
+#endif
+#ifndef PRINT
+    for( int i = 0; i<LEN;i++){
+      assert(out[i] == con[i]);
+    }
+    printf("\33[1;32m"STR(INST_NAME)" has passed the test!\n");
+#endif
+
+    return 0;
+}
